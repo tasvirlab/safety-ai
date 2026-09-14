@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "safetyai.com"
+    namespace = "com.azizbek.safetyai"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "safetyai.com"
+        applicationId = "com.azizbek.safetyai"
         minSdk = 24
         targetSdk = 37
         versionCode = 1

@@ -1,4 +1,4 @@
-package safetyai.com
+package com.azizbek.safetyai
 
 import org.junit.Test
 

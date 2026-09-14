@@ -1,4 +1,4 @@
-package safetyai.com
+package com.azizbek.safetyai
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -11,7 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import safetyai.com.ui.theme.SafetyAITheme
+import com.azizbek.safetyai.ui.theme.SafetyAITheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -1,4 +1,4 @@
-package safetyai.com.ui.theme
+package com.azizbek.safetyai.ui.theme
 
 import android.app.Activity
 import android.os.Build
