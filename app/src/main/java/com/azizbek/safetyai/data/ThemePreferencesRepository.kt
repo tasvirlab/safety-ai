@@ -24,4 +24,9 @@ class ThemePreferencesRepository(private val context: Context) {
     suspend fun setDarkMode(enabled: Boolean) {
         context.themeDataStore.edit { preferences -> preferences[darkModeKey] = enabled }
     }
+
+    /** Reverts to "no choice made" — the app then follows the system theme. */
+    suspend fun clearDarkMode() {
+        context.themeDataStore.edit { preferences -> preferences.remove(darkModeKey) }
+    }
 }
