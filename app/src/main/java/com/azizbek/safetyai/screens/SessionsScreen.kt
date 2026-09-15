@@ -1,12 +1,19 @@
 package com.azizbek.safetyai.screens
 
 import androidx.compose.runtime.Composable
-import com.azizbek.safetyai.ui.components.PlaceholderScreen
+import com.azizbek.safetyai.data.repository.AssessmentRepository
+import com.azizbek.safetyai.history.AssessmentsScreen
 
+/** Route/composable name kept as "Sessions" (see [com.azizbek.safetyai.navigation.SafetyDestination]) — only the user-facing label changed. Real logic lives in [com.azizbek.safetyai.history]. */
 @Composable
-fun SessionsScreen() {
-    PlaceholderScreen(
-        title = "Assessments",
-        message = "Past and in-progress assessments will appear here."
+fun SessionsScreen(
+    repository: AssessmentRepository,
+    onOpenAssessment: (String) -> Unit,
+    onStartAssessment: () -> Unit
+) {
+    AssessmentsScreen(
+        repository = repository,
+        onOpenAssessment = onOpenAssessment,
+        onStartAssessment = onStartAssessment
     )
 }
