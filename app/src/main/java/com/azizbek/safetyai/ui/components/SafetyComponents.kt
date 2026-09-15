@@ -54,11 +54,13 @@ fun SafetyCard(
 fun SafetyPrimaryButton(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Button(
         onClick = onClick,
         modifier = modifier.heightIn(min = 48.dp),
+        enabled = enabled,
         shape = RoundedCornerShape(12.dp)
     ) {
         Text(text, fontWeight = FontWeight.SemiBold)
