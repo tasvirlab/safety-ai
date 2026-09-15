@@ -45,6 +45,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.azizbek.safetyai.data.repository.AssessmentRepository
+import com.azizbek.safetyai.domain.Assessment
+import com.azizbek.safetyai.ui.components.AssessmentCard
 import com.azizbek.safetyai.ui.components.AssessmentSourceSheet
 import com.azizbek.safetyai.ui.components.SafetyCard
 import com.azizbek.safetyai.ui.components.SafetyPrimaryButton
@@ -58,11 +63,21 @@ import java.util.Calendar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    repository: AssessmentRepository? = null,
     onRecordTask: () -> Unit = {},
     onUploadVideo: () -> Unit = {},
-    onViewAllAssessments: () -> Unit = {}
+    onViewAllAssessments: () -> Unit = {},
+    onOpenAssessment: (String) -> Unit = {}
 ) {
     var showAssessmentSheet by remember { mutableStateOf(false) }
+    // Preview builds pass no repository — an empty list keeps the empty state visible there.
+    val recentAssessments: List<Assessment> = if (repository != null) {
+        val viewModel: HomeViewModel = viewModel(factory = HomeViewModel.factory(repository))
+        val state by viewModel.recentAssessments.collectAsStateWithLifecycle()
+        state
+    } else {
+        emptyList()
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -77,7 +92,14 @@ fun HomeScreen(
                 onUploadVideo = onUploadVideo
             )
         }
-        item { RecentAssessmentsSection(onViewAllAssessments = onViewAllAssessments) }
+        item {
+            RecentAssessmentsSection(
+                assessments = recentAssessments,
+                onViewAllAssessments = onViewAllAssessments,
+                onOpenAssessment = onOpenAssessment,
+                onStartAssessment = { showAssessmentSheet = true }
+            )
+        }
         item { HowItWorksSection() }
     }
 
@@ -297,7 +319,12 @@ private fun SourceActionCard(
 }
 
 @Composable
-private fun RecentAssessmentsSection(onViewAllAssessments: () -> Unit) {
+private fun RecentAssessmentsSection(
+    assessments: List<Assessment>,
+    onViewAllAssessments: () -> Unit,
+    onOpenAssessment: (String) -> Unit,
+    onStartAssessment: () -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -310,44 +337,53 @@ private fun RecentAssessmentsSection(onViewAllAssessments: () -> Unit) {
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground
             )
-            TextButton(onClick = onViewAllAssessments) {
-                Text("View all", color = MaterialTheme.colorScheme.primary)
+            if (assessments.isNotEmpty()) {
+                TextButton(onClick = onViewAllAssessments) {
+                    Text("View all", color = MaterialTheme.colorScheme.primary)
+                }
             }
         }
-        SafetyCard(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f),
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.History,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
+        if (assessments.isEmpty()) {
+            SafetyCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f),
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.History,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = "No assessments yet",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Text(
+                                text = "Record or upload a task video to begin.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    TextButton(onClick = onStartAssessment) { Text("Start assessment") }
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = "No assessments yet",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "Your completed assessments will appear here.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                assessments.forEach { assessment ->
+                    AssessmentCard(assessment = assessment, onClick = { onOpenAssessment(assessment.id) })
                 }
             }
         }
