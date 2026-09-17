@@ -13,20 +13,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.azizbek.safetyai.analysis.RiskLevel
+import com.azizbek.safetyai.ui.theme.LocalSafetyDarkTheme
+import com.azizbek.safetyai.ui.theme.RiskHighInkDark
+import com.azizbek.safetyai.ui.theme.RiskHighInkLight
+import com.azizbek.safetyai.ui.theme.RiskLowInkDark
+import com.azizbek.safetyai.ui.theme.RiskLowInkLight
+import com.azizbek.safetyai.ui.theme.RiskMediumInkDark
+import com.azizbek.safetyai.ui.theme.RiskMediumInkLight
+import com.azizbek.safetyai.ui.theme.RiskVeryHighInkDark
+import com.azizbek.safetyai.ui.theme.RiskVeryHighInkLight
 
-// Reserved risk-communication colors — used only alongside a text label, per
-// "never communicate risk using color alone". Not part of the app's regular
-// Material ColorScheme roles.
-private val RiskLow = Color(0xFF2E7D32)
-private val RiskMedium = Color(0xFFB07A00) // darker than the raw warning yellow for AA text contrast
-private val RiskHigh = Color(0xFFE06A1A)
-private val RiskVeryHigh = Color(0xFFC62828)
-
-private fun RiskLevel.color(): Color = when (this) {
-    RiskLevel.LOW -> RiskLow
-    RiskLevel.MEDIUM -> RiskMedium
-    RiskLevel.HIGH -> RiskHigh
-    RiskLevel.VERY_HIGH -> RiskVeryHigh
+/** The theme-safe risk color for text/borders — darker on light surfaces, brighter on dark surfaces so it always clears AA contrast. */
+@Composable
+private fun RiskLevel.ink(): Color {
+    val dark = LocalSafetyDarkTheme.current
+    return when (this) {
+        RiskLevel.LOW -> if (dark) RiskLowInkDark else RiskLowInkLight
+        RiskLevel.MEDIUM -> if (dark) RiskMediumInkDark else RiskMediumInkLight
+        RiskLevel.HIGH -> if (dark) RiskHighInkDark else RiskHighInkLight
+        RiskLevel.VERY_HIGH -> if (dark) RiskVeryHighInkDark else RiskVeryHighInkLight
+    }
 }
 
 private fun RiskLevel.label(): String = when (this) {
@@ -39,9 +45,10 @@ private fun RiskLevel.label(): String = when (this) {
 /** Always pairs the risk color with its text label — color alone never carries the meaning. */
 @Composable
 fun RiskChip(level: RiskLevel) {
-    Surface(shape = RoundedCornerShape(8.dp), color = level.color().copy(alpha = 0.16f)) {
+    val ink = level.ink()
+    Surface(shape = RoundedCornerShape(8.dp), color = ink.copy(alpha = 0.14f)) {
         Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
-            Text(level.label(), color = level.color(), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
+            Text(level.label(), color = ink, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
         }
     }
 }

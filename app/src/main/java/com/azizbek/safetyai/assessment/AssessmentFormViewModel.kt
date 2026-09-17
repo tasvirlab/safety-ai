@@ -39,20 +39,14 @@ class AssessmentFormViewModel(private val savedStateHandle: SavedStateHandle) : 
         savedStateHandle[KEY_FORM_STATE] = next
     }
 
-    fun onNameChange(value: String) {
-        if (value.length <= AssessmentFormState.MAX_NAME_LENGTH) {
-            update { it.copy(name = value, nameTouched = true) }
-        }
-    }
-
-    fun onProjectOrSiteChange(value: String) = update { it.copy(projectOrSite = value) }
+    fun onProjectOrSiteChange(value: String) = update { it.copy(projectOrSite = value).withAutoName() }
 
     fun onWorkerReferenceChange(value: String) = update { it.copy(workerReference = value) }
 
-    fun onTaskTypeSelected(type: TaskType) = update { it.copy(taskType = type, taskTypeTouched = true) }
+    fun onTaskTypeSelected(type: TaskType) = update { it.copy(taskType = type, taskTypeTouched = true).withAutoName() }
 
     fun onCustomTaskDescriptionChange(value: String) =
-        update { it.copy(customTaskDescription = value, customTaskTouched = true) }
+        update { it.copy(customTaskDescription = value, customTaskTouched = true).withAutoName() }
 
     fun onLoadTextChange(value: String) = update { it.withLoadText(value) }
 
@@ -60,4 +54,16 @@ class AssessmentFormViewModel(private val savedStateHandle: SavedStateHandle) : 
 
     fun onCouplingSelected(quality: CouplingQuality) =
         update { it.copy(coupling = quality, couplingTouched = true) }
+}
+
+/**
+ * The wizard never shows a manual "assessment name" field (dropped to match
+ * the redesign) — the name is derived from task type + work area instead,
+ * recomputed on every change to either.
+ */
+private fun AssessmentFormState.withAutoName(): AssessmentFormState {
+    val base = if (isOtherTaskType) customTaskDescription.trim() else taskType?.label().orEmpty()
+    val site = projectOrSite.trim()
+    val derived = if (base.isNotEmpty() && site.isNotEmpty()) "$base — $site" else base
+    return copy(name = derived, nameTouched = true)
 }

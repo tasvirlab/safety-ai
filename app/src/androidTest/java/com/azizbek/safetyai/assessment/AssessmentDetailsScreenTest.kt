@@ -10,7 +10,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.azizbek.safetyai.ui.theme.SafetyAITheme
@@ -20,6 +19,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+/** Covers the wizard's step 1 ([JobDetailsScreen]) and step 2 ([LoadCouplingScreen]) — split from one combined form so each screen gets its own coverage. */
 @RunWith(AndroidJUnit4::class)
 class AssessmentDetailsScreenTest {
 
@@ -27,8 +27,35 @@ class AssessmentDetailsScreenTest {
     val composeTestRule = createComposeRule()
 
     /** Wires a real [AssessmentFormState] driven by the screen's own callbacks, like the ViewModel does. */
-    private fun setContent(
+    private fun setJobDetailsContent(
         initialState: AssessmentFormState = AssessmentFormState(source = AssessmentSource.CAMERA),
+        darkTheme: Boolean = false,
+        onBack: () -> Unit = {},
+        onContinue: () -> Unit = {}
+    ) {
+        composeTestRule.setContent {
+            SafetyAITheme(darkTheme = darkTheme) {
+                var state by remember { mutableStateOf(initialState) }
+                fun update(transform: (AssessmentFormState) -> AssessmentFormState) {
+                    state = transform(state).copy(formEdited = true)
+                }
+                JobDetailsScreen(
+                    state = state,
+                    onProjectOrSiteChange = { update { s -> s.copy(projectOrSite = it) } },
+                    onWorkerReferenceChange = { update { s -> s.copy(workerReference = it) } },
+                    onTaskTypeSelected = { update { s -> s.copy(taskType = it, taskTypeTouched = true) } },
+                    onCustomTaskDescriptionChange = {
+                        update { s -> s.copy(customTaskDescription = it, customTaskTouched = true) }
+                    },
+                    onBack = onBack,
+                    onContinue = onContinue
+                )
+            }
+        }
+    }
+
+    private fun setLoadCouplingContent(
+        initialState: AssessmentFormState = AssessmentFormState(source = AssessmentSource.CAMERA, taskType = TaskType.LIFTING),
         darkTheme: Boolean = false,
         onBack: () -> Unit = {},
         onContinue: (AssessmentDraft) -> Unit = {}
@@ -36,20 +63,11 @@ class AssessmentDetailsScreenTest {
         composeTestRule.setContent {
             SafetyAITheme(darkTheme = darkTheme) {
                 var state by remember { mutableStateOf(initialState) }
-                // Mirrors AssessmentFormViewModel.update(): every field change marks the
-                // form edited, same as the real ViewModel does.
                 fun update(transform: (AssessmentFormState) -> AssessmentFormState) {
                     state = transform(state).copy(formEdited = true)
                 }
-                AssessmentDetailsScreen(
+                LoadCouplingScreen(
                     state = state,
-                    onNameChange = { update { s -> s.copy(name = it, nameTouched = true) } },
-                    onProjectOrSiteChange = { update { s -> s.copy(projectOrSite = it) } },
-                    onWorkerReferenceChange = { update { s -> s.copy(workerReference = it) } },
-                    onTaskTypeSelected = { update { s -> s.copy(taskType = it, taskTypeTouched = true) } },
-                    onCustomTaskDescriptionChange = {
-                        update { s -> s.copy(customTaskDescription = it, customTaskTouched = true) }
-                    },
                     onLoadTextChange = { update { s -> s.copy(loadKgText = it, loadTouched = true) } },
                     onSuddenForceChange = { update { s -> s.copy(suddenForce = it) } },
                     onCouplingSelected = { update { s -> s.copy(coupling = it, couplingTouched = true) } },
@@ -61,58 +79,49 @@ class AssessmentDetailsScreenTest {
     }
 
     @Test
-    fun titleAndSourceLabel_areCorrect() {
-        setContent(initialState = AssessmentFormState(source = AssessmentSource.VIDEO_UPLOAD))
-        composeTestRule.onNodeWithText("New assessment").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Video upload").assertIsDisplayed()
+    fun jobDetails_titleAndStep_areCorrect() {
+        setJobDetailsContent()
+        composeTestRule.onNodeWithText("Job details").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Step 1 of 5").assertIsDisplayed()
     }
 
     @Test
-    fun continueButton_isInitiallyDisabled() {
-        setContent(initialState = AssessmentFormState(source = AssessmentSource.CAMERA))
-        composeTestRule.onNodeWithText("Continue to camera").assertIsNotEnabled()
+    fun jobDetails_continueButton_isInitiallyDisabled() {
+        setJobDetailsContent()
+        composeTestRule.onNodeWithText("Continue").assertIsNotEnabled()
     }
 
     @Test
-    fun nameField_showsErrorOnlyAfterInteraction() {
-        setContent()
-        composeTestRule.onNodeWithText("Enter an assessment name").assertDoesNotExist()
-        composeTestRule.onNodeWithText("Assessment name").performTextInput("Test")
-        composeTestRule.onNodeWithText("Assessment name").performTextClearance()
-        composeTestRule.onNodeWithText("Enter an assessment name").assertIsDisplayed()
-    }
-
-    @Test
-    fun otherTaskField_isOnlyVisibleWhenOtherSelected() {
-        setContent()
+    fun jobDetails_otherTaskField_isOnlyVisibleWhenOtherSelected() {
+        setJobDetailsContent()
         composeTestRule.onNodeWithText("Describe the task").assertDoesNotExist()
-        composeTestRule.onNodeWithText("Task type").performClick()
+        composeTestRule.onNodeWithText("Select a task type").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Other").performClick()
         composeTestRule.onNodeWithText("Describe the task").assertIsDisplayed()
     }
 
     @Test
-    fun darkTheme_rendersWithoutCrashing() {
-        setContent(darkTheme = true)
-        composeTestRule.onNodeWithText("New assessment").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Assessment details").assertIsDisplayed()
+    fun jobDetails_darkTheme_rendersWithoutCrashing() {
+        setJobDetailsContent(darkTheme = true)
+        composeTestRule.onNodeWithText("Job details").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Work area").assertIsDisplayed()
     }
 
     @Test
-    fun backWithoutEdits_returnsImmediately() {
+    fun jobDetails_backWithoutEdits_returnsImmediately() {
         var backInvoked = false
-        setContent(onBack = { backInvoked = true })
+        setJobDetailsContent(onBack = { backInvoked = true })
         composeTestRule.onNodeWithContentDescription("Back").performClick()
         assertTrue(backInvoked)
         composeTestRule.onNodeWithText("Discard this assessment?").assertDoesNotExist()
     }
 
     @Test
-    fun backAfterEdit_showsDiscardDialog_keepEditingDismissesWithoutNavigating() {
+    fun jobDetails_backAfterEdit_showsDiscardDialog_keepEditingDismissesWithoutNavigating() {
         var backInvoked = false
-        setContent(onBack = { backInvoked = true })
-        composeTestRule.onNodeWithText("Assessment name").performTextInput("Test")
+        setJobDetailsContent(onBack = { backInvoked = true })
+        composeTestRule.onNodeWithText("Worker code").performTextInput("W-1")
         composeTestRule.onNodeWithContentDescription("Back").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Discard this assessment?").assertExists()
@@ -122,14 +131,46 @@ class AssessmentDetailsScreenTest {
     }
 
     @Test
-    fun backAfterEdit_discardInvokesOnBack() {
+    fun jobDetails_backAfterEdit_discardInvokesOnBack() {
         var backInvoked = false
-        setContent(onBack = { backInvoked = true })
-        composeTestRule.onNodeWithText("Assessment name").performTextInput("Test")
+        setJobDetailsContent(onBack = { backInvoked = true })
+        composeTestRule.onNodeWithText("Worker code").performTextInput("W-1")
         composeTestRule.onNodeWithContentDescription("Back").performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithText("Discard this assessment?").assertExists()
         composeTestRule.onNodeWithText("Discard").performClick()
         assertTrue(backInvoked)
+    }
+
+    @Test
+    fun loadCoupling_titleAndStep_areCorrect() {
+        setLoadCouplingContent()
+        composeTestRule.onNodeWithText("Load & coupling").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Step 2 of 5").assertIsDisplayed()
+    }
+
+    @Test
+    fun loadCoupling_continueButton_isInitiallyDisabled() {
+        setLoadCouplingContent()
+        composeTestRule.onNodeWithText("Continue").assertIsNotEnabled()
+    }
+
+    @Test
+    fun loadCoupling_backInvokesCallback_withNoDialog() {
+        var backInvoked = false
+        setLoadCouplingContent(onBack = { backInvoked = true })
+        composeTestRule.onNodeWithContentDescription("Back").performClick()
+        assertTrue(backInvoked)
+    }
+
+    @Test
+    fun loadCoupling_fillingLoadAndCoupling_enablesContinueAndProducesDraft() {
+        var producedDraft: AssessmentDraft? = null
+        setLoadCouplingContent(onContinue = { producedDraft = it })
+        composeTestRule.onNodeWithText("Load handled").performTextInput("8")
+        composeTestRule.onNodeWithText("Good").performClick()
+        composeTestRule.onNodeWithText("Continue").performClick()
+        assertTrue(producedDraft != null)
+        assertTrue(producedDraft?.taskType == TaskType.LIFTING)
     }
 }

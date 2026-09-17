@@ -38,12 +38,19 @@ import com.azizbek.safetyai.data.video.VideoFileStore
 import com.azizbek.safetyai.domain.VideoMetadata
 import com.azizbek.safetyai.ui.components.SafetyPrimaryButton
 
-/** Step 2B: video-only Photo Picker selection — no broad storage permission, no raw paths shown. */
+/**
+ * Video-only Photo Picker selection — no broad storage permission, no raw
+ * paths shown. Shared by the New Assessment wizard's upload path (step 3 of
+ * 5 — the upload source has no separate camera-setup/capture split) and the
+ * standalone "replace video" flow, which supplies its own [title]/[stepLabel].
+ */
 @Composable
 fun VideoUploadScreen(
     videoFileStore: VideoFileStore,
     onBack: () -> Unit,
     onVideoReady: (String, VideoMetadata) -> Unit,
+    title: String = "New assessment",
+    stepLabel: String? = "Step 3 of 5",
     viewModel: VideoUploadViewModel = viewModel(factory = VideoUploadViewModel.factory(videoFileStore))
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -66,8 +73,10 @@ fun VideoUploadScreen(
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
                         }
                         Column {
-                            Text("New assessment", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-                            Text("Step 2 of 3", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
+                            if (stepLabel != null) {
+                                Text(stepLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
@@ -87,7 +96,7 @@ fun VideoUploadScreen(
                 modifier = Modifier.size(72.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.VideoLibrary, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                Icon(Icons.Filled.VideoLibrary, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(32.dp))
             }
             Text(
                 text = "Choose a task video",

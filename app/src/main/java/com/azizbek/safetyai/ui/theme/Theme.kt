@@ -13,30 +13,45 @@ import androidx.compose.ui.graphics.Color
 // lightColorScheme()/darkColorScheme() fall back to their purple baseline
 // palette for any slot left unset, and Safety AI must never leak that
 // default purple/lavender.
-private val SafetyTealTint = SafetyTeal.copy(alpha = 0.14f)
+//
+// Role mapping (kept deliberately narrow):
+//  primary   = Safety Yellow, identical in both themes, always paired with
+//              charcoal text on top of it.
+//  tertiary  = the high-risk ink color, reserved for warning / high-risk
+//              accents only — never used as a general interactive color.
+//  error     = the very-high-risk ink color, shared with RiskChip's "Very
+//              high risk" tone, for destructive actions and severe risk alike.
+private val SafetyYellowTint = SafetyYellow.copy(alpha = 0.16f)
+private val SafetyCharcoalTint = SafetyCharcoal.copy(alpha = 0.06f)
+private val SafetyHighTintLight = RiskHighInkLight.copy(alpha = 0.14f)
+private val SafetyErrorTintLight = RiskVeryHighInkLight.copy(alpha = 0.12f)
 
 private val SafetyLightColorScheme = lightColorScheme(
-    primary = SafetyTeal,
-    onPrimary = Color.White,
-    primaryContainer = SafetyTealTint,
-    onPrimaryContainer = SafetyNavy,
-    secondary = SafetyNavy,
+    primary = SafetyYellow,
+    onPrimary = SafetyCharcoal,
+    primaryContainer = SafetyYellowTint,
+    onPrimaryContainer = SafetyCharcoal,
+    secondary = SafetyCharcoal,
     onSecondary = Color.White,
-    secondaryContainer = SafetyTealTint,
-    onSecondaryContainer = SafetyNavy,
-    tertiary = SafetyTeal,
+    secondaryContainer = SafetyCharcoalTint,
+    onSecondaryContainer = SafetyCharcoal,
+    tertiary = RiskHighInkLight,
     onTertiary = Color.White,
-    tertiaryContainer = SafetyTealTint,
-    onTertiaryContainer = SafetyNavy,
-    background = SafetyBackground,
-    onBackground = SafetyNavy,
+    tertiaryContainer = SafetyHighTintLight,
+    onTertiaryContainer = RiskHighInkLight,
+    error = RiskVeryHighInkLight,
+    onError = Color.White,
+    errorContainer = SafetyErrorTintLight,
+    onErrorContainer = RiskVeryHighInkLight,
+    background = SafetyOffWhite,
+    onBackground = SafetyCharcoal,
     surface = SafetyCardWhite,
-    onSurface = SafetyNavy,
-    surfaceVariant = SafetyBackground,
-    onSurfaceVariant = SafetySlate,
-    outline = SafetyOutline,
-    outlineVariant = SafetyOutline,
-    surfaceTint = SafetyTeal,
+    onSurface = SafetyCharcoal,
+    surfaceVariant = SafetyOffWhite,
+    onSurfaceVariant = SafetySteel,
+    outline = SafetyBorder,
+    outlineVariant = SafetyBorder,
+    surfaceTint = Color.Transparent,
     // Surface-container tonal scale — pinned so stock components (bottom
     // sheets, dialogs, menus) never fall back to Material's purple default.
     surfaceDim = SafetySurfaceDim,
@@ -47,63 +62,65 @@ private val SafetyLightColorScheme = lightColorScheme(
     surfaceContainerHigh = SafetySurfaceContainerHigh,
     surfaceContainerHighest = SafetySurfaceContainerHighest,
     // Inverse roles (e.g. Snackbar) and the modal scrim.
-    inverseSurface = SafetyNavy,
+    inverseSurface = SafetyCharcoal,
     inverseOnSurface = SafetyDarkTextPrimary,
-    inversePrimary = SafetyTealBright,
+    inversePrimary = SafetyYellow,
     scrim = Color.Black
 )
 
-// Dark palette: near-navy background, a lighter-navy tone for regular cards,
-// bright accessible teal for interactive elements (with dark text on top of
-// it, since teal this bright reads better with a dark foreground than
-// white), and dark-teal-tinted containers — never a straight inversion of
-// the light scheme.
-private val SafetyDarkTealTint = SafetyTealBright.copy(alpha = 0.16f)
+private val SafetyDarkYellowTint = SafetyYellow.copy(alpha = 0.16f)
+private val SafetyDarkCharcoalTint = SafetyDarkTextPrimary.copy(alpha = 0.08f)
+private val SafetyDarkHighTint = RiskHighInkDark.copy(alpha = 0.20f)
+private val SafetyDarkErrorTint = RiskVeryHighInkDark.copy(alpha = 0.20f)
 
 private val SafetyDarkColorScheme = darkColorScheme(
-    primary = SafetyTealBright,
-    onPrimary = SafetyDarkBackground,
-    primaryContainer = SafetyDarkTealTint,
-    onPrimaryContainer = SafetyDarkTextPrimary,
+    primary = SafetyYellow,
+    onPrimary = SafetyCharcoal,
+    primaryContainer = SafetyDarkYellowTint,
+    onPrimaryContainer = SafetyYellow,
     secondary = SafetyDarkTextPrimary,
-    onSecondary = SafetyDarkBackground,
-    secondaryContainer = SafetyDarkTealTint,
+    onSecondary = SafetyCharcoal,
+    secondaryContainer = SafetyDarkCharcoalTint,
     onSecondaryContainer = SafetyDarkTextPrimary,
-    tertiary = SafetyTealBright,
-    onTertiary = SafetyDarkBackground,
-    tertiaryContainer = SafetyDarkTealTint,
-    onTertiaryContainer = SafetyDarkTextPrimary,
+    tertiary = RiskHighInkDark,
+    onTertiary = SafetyCharcoal,
+    tertiaryContainer = SafetyDarkHighTint,
+    onTertiaryContainer = RiskHighInkDark,
+    error = RiskVeryHighInkDark,
+    onError = SafetyCharcoal,
+    errorContainer = SafetyDarkErrorTint,
+    onErrorContainer = RiskVeryHighInkDark,
     background = SafetyDarkBackground,
     onBackground = SafetyDarkTextPrimary,
-    surface = SafetyDarkSurface,
+    surface = SafetyDarkCard,
     onSurface = SafetyDarkTextPrimary,
-    surfaceVariant = SafetyDarkSurface,
+    surfaceVariant = SafetyDarkCard,
     onSurfaceVariant = SafetyDarkTextSecondary,
-    outline = SafetyDarkOutline,
-    outlineVariant = SafetyDarkOutline,
-    surfaceTint = SafetyTealBright,
-    // Same navy hue family as `surface`, stepped lighter — this is what
+    outline = SafetyDarkBorder,
+    outlineVariant = SafetyDarkBorder,
+    surfaceTint = Color.Transparent,
+    // Same charcoal hue family as `surface`, stepped lighter — this is what
     // fixes the purple/brown default tint on the dark ModalBottomSheet
     // (it draws from surfaceContainerLow).
     surfaceDim = SafetyDarkSurfaceDim,
     surfaceBright = SafetyDarkSurfaceContainerHighest,
     surfaceContainerLowest = SafetyDarkSurfaceContainerLowest,
     surfaceContainerLow = SafetyDarkSurfaceContainerLow,
-    surfaceContainer = SafetyDarkSurface,
+    surfaceContainer = SafetyDarkCard,
     surfaceContainerHigh = SafetyDarkSurfaceContainerHigh,
     surfaceContainerHighest = SafetyDarkSurfaceContainerHighest,
     // Inverse roles (e.g. Snackbar) and the modal scrim.
-    inverseSurface = SafetyBackground,
-    inverseOnSurface = SafetyDarkBackground,
-    inversePrimary = SafetyTeal,
+    inverseSurface = SafetyOffWhite,
+    inverseOnSurface = SafetyCharcoal,
+    inversePrimary = SafetyYellow,
     scrim = Color.Black
 )
 
 /**
  * Whether the app is currently in dark theme. Exposed alongside
- * [MaterialTheme] for the rare case (the Home hero card) where a color is a
- * fixed brand choice per theme rather than a semantic [MaterialTheme]
- * ColorScheme role.
+ * [MaterialTheme] for the rare case where a color is a fixed brand choice
+ * per theme rather than a semantic [MaterialTheme] ColorScheme role — e.g.
+ * picking between [RiskLowInkLight]/[RiskLowInkDark] and friends.
  */
 val LocalSafetyDarkTheme = staticCompositionLocalOf { false }
 

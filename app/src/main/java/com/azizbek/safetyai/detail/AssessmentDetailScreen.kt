@@ -22,7 +22,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,6 +48,7 @@ import com.azizbek.safetyai.data.repository.AssessmentRepository
 import com.azizbek.safetyai.domain.Assessment
 import com.azizbek.safetyai.domain.AssessmentStatus
 import com.azizbek.safetyai.domain.label
+import com.azizbek.safetyai.ui.components.SafetyOutlinedButton
 import com.azizbek.safetyai.ui.components.StatusChip
 import java.io.File
 import java.text.DateFormat
@@ -148,12 +148,12 @@ fun AssessmentDetailScreen(
                 ) { Text("Analyze assessment") }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = { onEdit(current.id) }, modifier = Modifier.weight(1f)) { Text("Edit metadata") }
-                    OutlinedButton(onClick = { onReplaceVideo(current.id) }, modifier = Modifier.weight(1f)) { Text("Replace video") }
+                    SafetyOutlinedButton(text = "Edit metadata", onClick = { onEdit(current.id) }, modifier = Modifier.weight(1f))
+                    SafetyOutlinedButton(text = "Replace video", onClick = { onReplaceVideo(current.id) }, modifier = Modifier.weight(1f))
                 }
 
                 if (current.status == AssessmentStatus.COMPLETED) {
-                    OutlinedButton(onClick = { onViewReport(current.id) }, modifier = Modifier.fillMaxWidth()) { Text("View report") }
+                    SafetyOutlinedButton(text = "View report", onClick = { onViewReport(current.id) }, modifier = Modifier.fillMaxWidth())
                 }
 
                 TextButton(
@@ -169,8 +169,16 @@ fun AssessmentDetailScreen(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Delete this assessment?") },
             text = { Text("This assessment and its saved video will be permanently removed.") },
-            confirmButton = { TextButton(onClick = { showDeleteDialog = false; viewModel.delete(onDeleted) }) { Text("Delete") } },
-            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") } }
+            confirmButton = {
+                TextButton(onClick = { showDeleteDialog = false; viewModel.delete(onDeleted) }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel", color = MaterialTheme.colorScheme.onBackground)
+                }
+            }
         )
     }
 
@@ -179,8 +187,16 @@ fun AssessmentDetailScreen(
             onDismissRequest = { showUnavailableDialog = false },
             title = { Text("Analysis engine unavailable") },
             text = { Text("This build does not yet include the validated Safety AI analysis engine. The assessment and video have been saved.") },
-            confirmButton = { TextButton(onClick = { showUnavailableDialog = false }) { Text("Done") } },
-            dismissButton = { TextButton(onClick = { showUnavailableDialog = false }) { Text("View assessment") } }
+            confirmButton = {
+                TextButton(onClick = { showUnavailableDialog = false }) {
+                    Text("Done", color = MaterialTheme.colorScheme.onBackground)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUnavailableDialog = false }) {
+                    Text("View assessment", color = MaterialTheme.colorScheme.onBackground)
+                }
+            }
         )
     }
 }

@@ -160,9 +160,10 @@ fun CameraRecordingScreen(
                             .fillMaxSize()
                             .padding(horizontal = 48.dp, vertical = 96.dp)
                     ) {
+                        val frameColor = MaterialTheme.colorScheme.primary
                         androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
                             drawRect(
-                                color = Color.White.copy(alpha = 0.35f),
+                                color = frameColor.copy(alpha = 0.5f),
                                 style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
                             )
                         }
@@ -251,9 +252,13 @@ fun CameraRecordingScreen(
                     isRecording = false
                     showDiscardDialog = false
                     onBack()
-                }) { Text("Discard") }
+                }) { Text("Discard", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showDiscardDialog = false }) { Text("Keep recording") } }
+            dismissButton = {
+                TextButton(onClick = { showDiscardDialog = false }) {
+                    Text("Keep recording", color = MaterialTheme.colorScheme.onBackground)
+                }
+            }
         )
     }
 }
@@ -324,14 +329,12 @@ private fun RecordButton(isRecording: Boolean, modifier: Modifier = Modifier, on
     Box(
         modifier = modifier
             .size(76.dp)
-            .background(Color.White.copy(alpha = 0.25f), CircleShape)
+            .background(MaterialTheme.colorScheme.primary, CircleShape)
             .clickable(onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         if (isRecording) {
             Box(modifier = Modifier.size(28.dp).background(MaterialTheme.colorScheme.error, RoundedSquare))
-        } else {
-            Box(modifier = Modifier.size(60.dp).background(MaterialTheme.colorScheme.error, CircleShape))
         }
     }
 }

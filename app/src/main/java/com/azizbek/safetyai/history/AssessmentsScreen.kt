@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -69,7 +70,11 @@ fun AssessmentsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("Search by name, site, or worker reference") },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                singleLine = true
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.onBackground,
+                    cursorColor = MaterialTheme.colorScheme.onBackground
+                )
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TaskTypeFilterChip(selected = taskTypeFilter, onSelected = { viewModel.taskTypeFilter.value = it })
@@ -112,9 +117,15 @@ fun AssessmentsScreen(
             title = { Text("Delete this assessment?") },
             text = { Text("\"${assessment.name}\" and its saved video will be permanently removed.") },
             confirmButton = {
-                TextButton(onClick = { viewModel.delete(assessment); pendingDelete = null }) { Text("Delete") }
+                TextButton(onClick = { viewModel.delete(assessment); pendingDelete = null }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
             },
-            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Cancel") } }
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) {
+                    Text("Cancel", color = MaterialTheme.colorScheme.onBackground)
+                }
+            }
         )
     }
 }
@@ -134,7 +145,9 @@ private fun EmptyAssessments(onStartAssessment: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp)
         )
-        TextButton(onClick = onStartAssessment, modifier = Modifier.padding(top = 12.dp)) { Text("Start assessment") }
+        TextButton(onClick = onStartAssessment, modifier = Modifier.padding(top = 12.dp)) {
+            Text("Start assessment", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 

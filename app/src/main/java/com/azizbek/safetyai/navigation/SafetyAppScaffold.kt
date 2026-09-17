@@ -1,21 +1,18 @@
 package com.azizbek.safetyai.navigation
 
-import androidx.activity.compose.BackHandler
+import android.os.Bundle
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -38,24 +35,25 @@ import androidx.navigation.navArgument
 import com.azizbek.safetyai.SafetyAIApplication
 import com.azizbek.safetyai.assessment.ASSESSMENT_DETAILS_ROUTE_PATTERN
 import com.azizbek.safetyai.assessment.ASSESSMENT_SOURCE_ARG
-import com.azizbek.safetyai.assessment.AssessmentDetailsRoute
 import com.azizbek.safetyai.assessment.AssessmentFormViewModel
 import com.azizbek.safetyai.assessment.AssessmentSource
 import com.azizbek.safetyai.assessment.CAMERA_GUIDANCE_ROUTE
 import com.azizbek.safetyai.assessment.CAMERA_RECORDING_ROUTE
+import com.azizbek.safetyai.assessment.JobDetailsRoute
+import com.azizbek.safetyai.assessment.LOAD_COUPLING_ROUTE_PATTERN
+import com.azizbek.safetyai.assessment.LoadCouplingRoute
 import com.azizbek.safetyai.assessment.NEW_ASSESSMENT_FLOW_ROUTE
 import com.azizbek.safetyai.assessment.NEW_ASSESSMENT_FLOW_ROUTES
 import com.azizbek.safetyai.assessment.NewAssessmentFlowViewModel
 import com.azizbek.safetyai.assessment.REVIEW_ASSESSMENT_ROUTE
-import com.azizbek.safetyai.assessment.VIDEO_PREVIEW_ROUTE
 import com.azizbek.safetyai.assessment.VIDEO_UPLOAD_ROUTE
 import com.azizbek.safetyai.assessment.assessmentDetailsRoute
+import com.azizbek.safetyai.assessment.loadCouplingRoute
 import com.azizbek.safetyai.capture.CameraGuidanceScreen
 import com.azizbek.safetyai.capture.CameraRecordingScreen
 import com.azizbek.safetyai.detail.AssessmentDetailScreen
 import com.azizbek.safetyai.detail.EditAssessmentScreen
 import com.azizbek.safetyai.notifications.NotificationsScreen
-import com.azizbek.safetyai.preview.VideoPreviewScreen
 import com.azizbek.safetyai.reports.ReportsScreen
 import com.azizbek.safetyai.review.ReviewAssessmentScreen
 import com.azizbek.safetyai.screens.HomeScreen
@@ -65,67 +63,44 @@ import com.azizbek.safetyai.ui.components.SafetyHeader
 import com.azizbek.safetyai.upload.VideoUploadScreen
 import kotlinx.coroutines.launch
 
-/** App-wide Scaffold hosting the navigation drawer, bottom bar, and NavHost — the drawer and bottom bar share one NavController and destination state. */
+/**
+ * App-wide Scaffold hosting the top bar, bottom nav, and NavHost. No
+ * navigation drawer — bottom navigation already covers Home/Assessments/
+ * Reports, and a drawer duplicating it was removed.
+ */
 @Composable
-fun SafetyAppScaffold(
-    isDarkMode: Boolean,
-    onToggleDarkMode: (Boolean) -> Unit
-) {
+fun SafetyAppScaffold() {
     val navController = rememberNavController()
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
     val container = (LocalContext.current.applicationContext as SafetyAIApplication).container
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     // Every screen in the New Assessment flow, plus assessment detail/edit/replace-video,
-    // notifications and settings, are full-screen — no drawer, no bottom nav.
+    // notifications and settings, are full-screen — no bottom nav.
     val isChromeless = currentRoute != null && (
         NEW_ASSESSMENT_FLOW_ROUTES.any { currentRoute.startsWith(it) } ||
             CHROMELESS_ROUTE_PREFIXES.any { currentRoute.startsWith(it) }
         )
 
-    BackHandler(enabled = drawerState.isOpen) {
-        scope.launch { drawerState.close() }
-    }
-
     fun navigateTo(destination: SafetyDestination) {
         navController.navigateToDestination(destination)
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        gesturesEnabled = !isChromeless,
-        drawerContent = {
-            SafetyDrawerContent(
-                destinations = SafetyDestination.bottomNavItems,
-                currentRoute = currentRoute,
-                onDestinationClick = { destination ->
-                    navigateTo(destination)
-                    scope.launch { drawerState.close() }
-                },
-                onClose = { scope.launch { drawerState.close() } },
-                isDarkMode = isDarkMode,
-                onToggleDarkMode = onToggleDarkMode
-            )
-        }
-    ) {
-        Scaffold(
-            topBar = {
-                if (!isChromeless) {
-                    SafetyTopBar(
-                        onMenuClick = { scope.launch { drawerState.open() } },
-                        onNotificationsClick = { navController.navigate(NOTIFICATIONS_ROUTE) },
-                        onProfileClick = { navController.navigate(SETTINGS_ROUTE) }
-                    )
-                }
-            },
-            bottomBar = {
-                if (!isChromeless) {
-                    SafetyBottomBar(currentRoute = currentRoute, onNavigate = ::navigateTo)
-                }
+    Scaffold(
+        topBar = {
+            if (!isChromeless) {
+                SafetyTopBar(
+                    onNotificationsClick = { navController.navigate(NOTIFICATIONS_ROUTE) },
+                    onSettingsClick = { navController.navigate(SETTINGS_ROUTE) }
+                )
             }
-        ) { innerPadding ->
+        },
+        bottomBar = {
+            if (!isChromeless) {
+                SafetyBottomBar(currentRoute = currentRoute, onNavigate = ::navigateTo)
+            }
+        }
+    ) { innerPadding ->
             NavHost(
                 navController = navController,
                 startDestination = SafetyDestination.Home.route,
@@ -165,9 +140,25 @@ fun SafetyAppScaffold(
                         route = ASSESSMENT_DETAILS_ROUTE_PATTERN,
                         arguments = listOf(navArgument(ASSESSMENT_SOURCE_ARG) { type = NavType.StringType })
                     ) { entry ->
+                        val source = entry.arguments.toAssessmentSource()
                         val formViewModel: AssessmentFormViewModel = viewModel(entry)
+                        JobDetailsRoute(
+                            viewModel = formViewModel,
+                            onBack = { navController.popBackStack() },
+                            onContinue = { navController.navigate(loadCouplingRoute(source)) }
+                        )
+                    }
+                    composable(
+                        route = LOAD_COUPLING_ROUTE_PATTERN,
+                        arguments = listOf(navArgument(ASSESSMENT_SOURCE_ARG) { type = NavType.StringType })
+                    ) { entry ->
+                        val source = entry.arguments.toAssessmentSource()
+                        // Shares the exact AssessmentFormViewModel instance step 1 created,
+                        // by looking up that same back-stack entry via its route.
+                        val jobDetailsEntry = navController.getBackStackEntry(assessmentDetailsRoute(source))
+                        val formViewModel: AssessmentFormViewModel = viewModel(jobDetailsEntry)
                         val flowViewModel = rememberFlowViewModel(navController, container)
-                        AssessmentDetailsRoute(
+                        LoadCouplingRoute(
                             viewModel = formViewModel,
                             onBack = { navController.popBackStack() },
                             onContinue = { draft ->
@@ -193,7 +184,7 @@ fun SafetyAppScaffold(
                                 coroutineScope.launch {
                                     val metadata = container.videoFileStore.readMetadata(file)
                                     flowViewModel.setVideo(file.absolutePath, metadata)
-                                    navController.navigate(VIDEO_PREVIEW_ROUTE)
+                                    navController.navigate(REVIEW_ASSESSMENT_ROUTE)
                                 }
                             }
                         )
@@ -205,43 +196,29 @@ fun SafetyAppScaffold(
                             onBack = { navController.popBackStack() },
                             onVideoReady = { path, metadata ->
                                 flowViewModel.setVideo(path, metadata)
-                                navController.navigate(VIDEO_PREVIEW_ROUTE)
+                                navController.navigate(REVIEW_ASSESSMENT_ROUTE)
                             }
                         )
-                    }
-                    composable(VIDEO_PREVIEW_ROUTE) {
-                        val flowViewModel = rememberFlowViewModel(navController, container)
-                        val state by flowViewModel.state.collectAsStateWithLifecycle()
-                        val path = state.videoFilePath
-                        val metadata = state.videoMetadata
-                        if (path != null && metadata != null) {
-                            VideoPreviewScreen(
-                                source = state.draft?.source ?: AssessmentSource.CAMERA,
-                                videoFilePath = path,
-                                metadata = metadata,
-                                onDiscard = {
-                                    flowViewModel.discardVideo()
-                                    navController.popBackStack()
-                                },
-                                onUseThisVideo = { navController.navigate(REVIEW_ASSESSMENT_ROUTE) }
-                            )
-                        }
                     }
                     composable(REVIEW_ASSESSMENT_ROUTE) {
                         val flowViewModel = rememberFlowViewModel(navController, container)
                         val state by flowViewModel.state.collectAsStateWithLifecycle()
                         val draft = state.draft
+                        val path = state.videoFilePath
                         val metadata = state.videoMetadata
-                        if (draft != null && metadata != null) {
+                        if (draft != null && path != null && metadata != null) {
                             ReviewAssessmentScreen(
                                 draft = draft,
+                                videoFilePath = path,
                                 videoMetadata = metadata,
                                 isSaving = state.isSaving,
-                                onBack = { navController.popBackStack() },
+                                onDiscardVideo = {
+                                    flowViewModel.discardVideo()
+                                    navController.popBackStack()
+                                },
                                 onEditDetails = {
                                     navController.popBackStack(route = assessmentDetailsRoute(draft.source), inclusive = false)
                                 },
-                                onChangeVideo = { navController.popBackStack() },
                                 onSave = {
                                     flowViewModel.save { assessmentId ->
                                         navController.navigate(assessmentDetailRoute(assessmentId)) {
@@ -291,6 +268,8 @@ fun SafetyAppScaffold(
                     VideoUploadScreen(
                         videoFileStore = container.videoFileStore,
                         onBack = { navController.popBackStack() },
+                        title = "Replace video",
+                        stepLabel = null,
                         onVideoReady = { path, metadata ->
                             coroutineScope.launch {
                                 val existing = container.assessmentRepository.getById(id)
@@ -320,7 +299,6 @@ fun SafetyAppScaffold(
                 }
             }
         }
-    }
 }
 
 /**
@@ -342,7 +320,13 @@ private fun rememberFlowViewModel(
     )
 }
 
-/** Navigates without piling up duplicate back-stack entries — shared by the drawer and the bottom bar. */
+/** Reads the `{source}` nav argument shared by every step-1/step-2 wizard route. */
+private fun Bundle?.toAssessmentSource(): AssessmentSource =
+    this?.getString(ASSESSMENT_SOURCE_ARG)
+        ?.let { runCatching { AssessmentSource.valueOf(it) }.getOrNull() }
+        ?: AssessmentSource.CAMERA
+
+/** Navigates without piling up duplicate back-stack entries — shared by the bottom bar. */
 private fun NavHostController.navigateToDestination(destination: SafetyDestination) {
     navigate(destination.route) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
@@ -351,21 +335,19 @@ private fun NavHostController.navigateToDestination(destination: SafetyDestinati
     }
 }
 
-/** Shared across every screen — not just Home — so the menu/notifications/profile actions are always reachable. */
+/** Shared across every top-level screen so Notifications/Settings are always reachable. */
 @Composable
 private fun SafetyTopBar(
-    onMenuClick: () -> Unit,
     onNotificationsClick: () -> Unit,
-    onProfileClick: () -> Unit
+    onSettingsClick: () -> Unit
 ) {
     Surface(color = MaterialTheme.colorScheme.background) {
         SafetyHeader(
             modifier = Modifier
                 .statusBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 8.dp),
-            onMenuClick = onMenuClick,
             onNotificationsClick = onNotificationsClick,
-            onProfileClick = onProfileClick
+            onSettingsClick = onSettingsClick
         )
     }
 }
@@ -385,9 +367,11 @@ private fun SafetyBottomBar(currentRoute: String?, onNavigate: (SafetyDestinatio
                     // TalkBack isn't made to read it twice.
                     icon = { Icon(destination.icon, contentDescription = null) },
                     label = { Text(destination.label) },
+                    // Selected icon/label stay charcoal (bold, always readable) — the
+                    // yellow lives in the pill behind them, never as yellow text.
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                        selectedIconColor = MaterialTheme.colorScheme.onBackground,
+                        selectedTextColor = MaterialTheme.colorScheme.onBackground,
                         indicatorColor = MaterialTheme.colorScheme.primaryContainer,
                         unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant

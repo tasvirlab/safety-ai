@@ -39,10 +39,7 @@ private fun SafetyApp() {
     ApplySystemBarContrast(darkTheme = isDarkMode)
 
     SafetyAITheme(darkTheme = isDarkMode) {
-        SafetyAppScaffold(
-            isDarkMode = isDarkMode,
-            onToggleDarkMode = themeViewModel::setDarkMode
-        )
+        SafetyAppScaffold()
     }
 }
 

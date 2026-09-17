@@ -79,8 +79,12 @@ data class AssessmentFormState(
             else -> null
         }
 
+    /** Step 1 (Job details) is complete once name + task type are set — load/coupling belong to step 2. */
+    val isStep1Valid: Boolean
+        get() = isNameValid && taskType != null && isCustomTaskValid
+
     val isValid: Boolean
-        get() = isNameValid && taskType != null && isCustomTaskValid && isLoadValid && isCouplingValid
+        get() = isStep1Valid && isLoadValid && isCouplingValid
 
     /** Applies a new load-text value, clearing a "Not applicable" coupling choice that a nonzero load would make invalid. */
     fun withLoadText(value: String): AssessmentFormState {

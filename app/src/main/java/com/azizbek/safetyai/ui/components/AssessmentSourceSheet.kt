@@ -103,7 +103,7 @@ private fun SheetOptionRow(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.size(20.dp)
             )
         }

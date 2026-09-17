@@ -44,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -52,49 +51,42 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.azizbek.safetyai.ui.components.SafetyPrimaryButton
+import com.azizbek.safetyai.ui.components.StepProgressBar
 
-/** Connects [AssessmentFormViewModel] to the stateless [AssessmentDetailsScreen]. */
+private const val TOTAL_WIZARD_STEPS = 5
+
+/** Connects [AssessmentFormViewModel] to the stateless [JobDetailsScreen] — step 1 of 5. */
 @Composable
-fun AssessmentDetailsRoute(
+fun JobDetailsRoute(
     viewModel: AssessmentFormViewModel,
     onBack: () -> Unit,
-    onContinue: (AssessmentDraft) -> Unit
+    onContinue: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    AssessmentDetailsScreen(
+    JobDetailsScreen(
         state = state,
-        onNameChange = viewModel::onNameChange,
         onProjectOrSiteChange = viewModel::onProjectOrSiteChange,
         onWorkerReferenceChange = viewModel::onWorkerReferenceChange,
         onTaskTypeSelected = viewModel::onTaskTypeSelected,
         onCustomTaskDescriptionChange = viewModel::onCustomTaskDescriptionChange,
-        onLoadTextChange = viewModel::onLoadTextChange,
-        onSuddenForceChange = viewModel::onSuddenForceChange,
-        onCouplingSelected = viewModel::onCouplingSelected,
         onBack = onBack,
         onContinue = onContinue
     )
 }
 
 /**
- * Step 1 of the New Assessment flow. Stateless: [state] in, typed callbacks
- * out. Stops at [onContinue] — no camera, file picker, or REBA logic lives
- * here.
+ * Step 1 of 5 — task context. Stateless: [state] in, typed callbacks out.
+ * Stops at [onContinue] — no camera, file picker, or REBA logic lives here.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AssessmentDetailsScreen(
+fun JobDetailsScreen(
     state: AssessmentFormState,
-    onNameChange: (String) -> Unit,
     onProjectOrSiteChange: (String) -> Unit,
     onWorkerReferenceChange: (String) -> Unit,
     onTaskTypeSelected: (TaskType) -> Unit,
     onCustomTaskDescriptionChange: (String) -> Unit,
-    onLoadTextChange: (String) -> Unit,
-    onSuddenForceChange: (Boolean) -> Unit,
-    onCouplingSelected: (CouplingQuality) -> Unit,
     onBack: () -> Unit,
-    onContinue: (AssessmentDraft) -> Unit
+    onContinue: () -> Unit
 ) {
     var showDiscardDialog by remember { mutableStateOf(false) }
 
@@ -108,27 +100,71 @@ fun AssessmentDetailsScreen(
 
     Scaffold(
         modifier = Modifier.imePadding(),
-        topBar = { AssessmentTopBar(source = state.source, onBackClick = ::requestBack) },
+        topBar = { WizardTopBar(title = "Job details", step = 1, onBackClick = ::requestBack) },
         bottomBar = {
-            AssessmentBottomBar(
-                source = state.source,
-                enabled = state.isValid,
-                onContinueClick = { state.toDraftOrNull()?.let(onContinue) }
+            WizardBottomBar(
+                label = "Continue",
+                enabled = state.isStep1Valid,
+                onContinueClick = onContinue
             )
         }
     ) { innerPadding ->
-        AssessmentForm(
-            modifier = Modifier.padding(innerPadding),
-            state = state,
-            onNameChange = onNameChange,
-            onProjectOrSiteChange = onProjectOrSiteChange,
-            onWorkerReferenceChange = onWorkerReferenceChange,
-            onTaskTypeSelected = onTaskTypeSelected,
-            onCustomTaskDescriptionChange = onCustomTaskDescriptionChange,
-            onLoadTextChange = onLoadTextChange,
-            onSuddenForceChange = onSuddenForceChange,
-            onCouplingSelected = onCouplingSelected
-        )
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            Text(
+                text = "Sets the posture model and the reference technique used for scoring.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            TaskTypeDropdown(
+                selected = state.taskType,
+                onSelected = onTaskTypeSelected,
+                errorText = state.taskTypeError
+            )
+            if (state.isOtherTaskType) {
+                AssessmentTextField(
+                    label = "Describe the task",
+                    placeholder = "e.g., Pallet jack maneuvering",
+                    value = state.customTaskDescription,
+                    onValueChange = onCustomTaskDescriptionChange,
+                    errorText = state.customTaskError,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                        imeAction = ImeAction.Next
+                    )
+                )
+            }
+
+            AssessmentTextField(
+                label = "Work area",
+                placeholder = "e.g., Warehouse Zone C",
+                value = state.projectOrSite,
+                onValueChange = onProjectOrSiteChange,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Next
+                )
+            )
+
+            AssessmentTextField(
+                label = "Worker code",
+                placeholder = "e.g., W-A3",
+                value = state.workerReference,
+                onValueChange = onWorkerReferenceChange,
+                supportingText = "Anonymised identifier — no personal data is stored.",
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    imeAction = ImeAction.Done
+                )
+            )
+        }
     }
 
     if (showDiscardDialog) {
@@ -142,8 +178,91 @@ fun AssessmentDetailsScreen(
     }
 }
 
+/** Connects [AssessmentFormViewModel] to the stateless [LoadCouplingScreen] — step 2 of 5. */
 @Composable
-private fun AssessmentTopBar(source: AssessmentSource, onBackClick: () -> Unit) {
+fun LoadCouplingRoute(
+    viewModel: AssessmentFormViewModel,
+    onBack: () -> Unit,
+    onContinue: (AssessmentDraft) -> Unit
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LoadCouplingScreen(
+        state = state,
+        onLoadTextChange = viewModel::onLoadTextChange,
+        onSuddenForceChange = viewModel::onSuddenForceChange,
+        onCouplingSelected = viewModel::onCouplingSelected,
+        onBack = onBack,
+        onContinue = onContinue
+    )
+}
+
+/**
+ * Step 2 of 5 — the modifiers that adjust the final score but can't be read
+ * from video. Stateless: [state] in, typed callbacks out.
+ */
+@Composable
+fun LoadCouplingScreen(
+    state: AssessmentFormState,
+    onLoadTextChange: (String) -> Unit,
+    onSuddenForceChange: (Boolean) -> Unit,
+    onCouplingSelected: (CouplingQuality) -> Unit,
+    onBack: () -> Unit,
+    onContinue: (AssessmentDraft) -> Unit
+) {
+    Scaffold(
+        modifier = Modifier.imePadding(),
+        topBar = { WizardTopBar(title = "Load & coupling", step = 2, onBackClick = onBack) },
+        bottomBar = {
+            WizardBottomBar(
+                label = "Continue",
+                enabled = state.isValid,
+                onContinueClick = { state.toDraftOrNull()?.let(onContinue) }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            Text(
+                text = "These modifiers adjust the final score. They can't be read from video.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            AssessmentTextField(
+                label = "Load handled",
+                placeholder = "0",
+                value = state.loadKgText,
+                onValueChange = onLoadTextChange,
+                errorText = state.loadError,
+                supportingText = if (state.loadError == null) {
+                    "Enter the approximate load handled during the task."
+                } else {
+                    null
+                },
+                suffix = "kg",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next)
+            )
+
+            SuddenForceToggle(checked = state.suddenForce, onCheckedChange = onSuddenForceChange)
+
+            CouplingSelector(
+                selected = state.coupling,
+                showNotApplicable = state.isZeroLoad,
+                errorText = state.couplingError,
+                onSelected = onCouplingSelected
+            )
+        }
+    }
+}
+
+@Composable
+private fun WizardTopBar(title: String, step: Int, onBackClick: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Column {
             Row(modifier = Modifier.padding(end = 20.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -154,46 +273,36 @@ private fun AssessmentTopBar(source: AssessmentSource, onBackClick: () -> Unit) 
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
-                Text(
-                    text = "New assessment",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "Step $step of $TOTAL_WIZARD_STEPS",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-            Row(
-                modifier = Modifier.padding(start = 20.dp, bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "Step 1 of 3",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "·",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = source.sourceLabel(),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+            StepProgressBar(
+                currentStep = step,
+                totalSteps = TOTAL_WIZARD_STEPS,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+            )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
         }
     }
 }
 
 @Composable
-private fun AssessmentBottomBar(source: AssessmentSource, enabled: Boolean, onContinueClick: () -> Unit) {
+private fun WizardBottomBar(label: String, enabled: Boolean, onContinueClick: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Column {
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             SafetyPrimaryButton(
-                text = source.continueLabel(),
+                text = label,
                 onClick = onContinueClick,
                 enabled = enabled,
                 modifier = Modifier
@@ -204,7 +313,7 @@ private fun AssessmentBottomBar(source: AssessmentSource, enabled: Boolean, onCo
     }
 }
 
-/** Internal (not private): reused as-is by [com.azizbek.safetyai.detail.EditAssessmentScreen] for editing a saved assessment's metadata. */
+/** Internal (not private): reused as-is by [com.azizbek.safetyai.detail.EditAssessmentScreen] for editing a saved assessment's metadata in one screen. */
 @Composable
 internal fun AssessmentForm(
     modifier: Modifier = Modifier,
@@ -229,7 +338,6 @@ internal fun AssessmentForm(
             Text(
                 text = "Assessment details",
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
@@ -345,10 +453,11 @@ private fun AssessmentTextField(
         supportingText = message?.let { { Text(it) } },
         keyboardOptions = keyboardOptions,
         singleLine = true,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
-            cursorColor = MaterialTheme.colorScheme.primary
+            focusedLabelColor = MaterialTheme.colorScheme.onBackground,
+            cursorColor = MaterialTheme.colorScheme.onBackground
         )
     )
 }
@@ -361,34 +470,41 @@ private fun TaskTypeDropdown(
     errorText: String?
 ) {
     var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            value = selected?.label() ?: "",
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Task type") },
-            placeholder = { Text("Select a task type") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            isError = errorText != null,
-            supportingText = errorText?.let { { Text(it) } },
-            modifier = Modifier
-                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
-                .fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                cursorColor = MaterialTheme.colorScheme.primary
-            )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Task type",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            TaskType.entries.forEach { type ->
-                DropdownMenuItem(
-                    text = { Text(type.label()) },
-                    onClick = {
-                        onSelected(type)
-                        expanded = false
-                    }
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+            OutlinedTextField(
+                value = selected?.label() ?: "",
+                onValueChange = {},
+                readOnly = true,
+                placeholder = { Text("Select a task type") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                isError = errorText != null,
+                supportingText = (errorText ?: "Sets the posture model and the reference technique clip.").let { { Text(it) } },
+                modifier = Modifier
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    focusedLabelColor = MaterialTheme.colorScheme.onBackground,
+                    cursorColor = MaterialTheme.colorScheme.onBackground
                 )
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                TaskType.entries.forEach { type ->
+                    DropdownMenuItem(
+                        text = { Text(type.label()) },
+                        onClick = {
+                            onSelected(type)
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
     }
@@ -401,16 +517,15 @@ private fun SuddenForceToggle(checked: Boolean, onCheckedChange: (Boolean) -> Un
             .fillMaxWidth()
             .defaultMinSize(minHeight = 48.dp)
             .clickable(role = Role.Switch) { onCheckedChange(!checked) },
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
-        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Sudden or rapidly applied force",
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
@@ -445,8 +560,7 @@ private fun CouplingSelector(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = "Grip and coupling",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onBackground
         )
         Text(
@@ -478,13 +592,14 @@ private fun CouplingSelector(
 
 @Composable
 private fun CouplingOptionCard(option: CouplingQuality, selected: Boolean, onClick: () -> Unit) {
-    val borderColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+    // Charcoal, not yellow — a yellow border reads too weakly against a white/light card.
+    val borderColor = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.outline
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 48.dp)
             .selectable(selected = selected, onClick = onClick, role = Role.RadioButton),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, borderColor)
     ) {
@@ -493,12 +608,16 @@ private fun CouplingOptionCard(option: CouplingQuality, selected: Boolean, onCli
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            RadioButton(selected = selected, onClick = null)
+            RadioButton(
+                selected = selected,
+                onClick = null,
+                // Charcoal selected dot — a yellow one reads too weakly against white.
+                colors = androidx.compose.material3.RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.onBackground)
+            )
             Column {
                 Text(
                     text = option.label(),
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
@@ -517,7 +636,11 @@ private fun DiscardAssessmentDialog(onKeepEditing: () -> Unit, onDiscard: () -> 
         onDismissRequest = onKeepEditing,
         title = { Text("Discard this assessment?") },
         text = { Text("The details you entered will not be saved.") },
-        confirmButton = { TextButton(onClick = onDiscard) { Text("Discard") } },
-        dismissButton = { TextButton(onClick = onKeepEditing) { Text("Keep editing") } }
+        confirmButton = {
+            TextButton(onClick = onDiscard) { Text("Discard", color = MaterialTheme.colorScheme.error) }
+        },
+        dismissButton = {
+            TextButton(onClick = onKeepEditing) { Text("Keep editing", color = MaterialTheme.colorScheme.onBackground) }
+        }
     )
 }

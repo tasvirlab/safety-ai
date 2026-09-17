@@ -2,46 +2,58 @@ package com.azizbek.safetyai.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Safety AI brand palette (light theme).
-val SafetyTeal = Color(0xFF147E70)
-val SafetyNavy = Color(0xFF182B3B)
-val SafetyBackground = Color(0xFFF6F8FA)
-val SafetyCardWhite = Color(0xFFFFFFFF)
-val SafetyOutline = Color(0xFFE3E9ED)
-val SafetySlate = Color(0xFF64748B)
+// Safety AI brand palette — matches the Claude Design handoff exactly.
+// Safety yellow for primary actions, risk colors for warning/high-risk
+// accents only. No teal, no purple, no gradients.
+val SafetyYellow = Color(0xFFFFD54F)
+val SafetyCharcoal = Color(0xFF101519) // on-yellow text + light-theme foreground
+val SafetySteel = Color(0xFF5C666E) // light-theme secondary text
 
-// Reserved for genuine ergonomic warning / risk states (e.g. a REBA score
-// badge once real assessments exist) — never used as decoration, in either
-// theme.
-val SafetyRiskAmber = Color(0xFFF59E0B)
+val SafetyOffWhite = Color(0xFFF4F6F7) // light bg
+val SafetyCardWhite = Color(0xFFFFFFFF) // light surface
+val SafetyBorder = Color(0xFFD3D9DD) // light outline
+
+// Dark theme surfaces.
+val SafetyDarkBackground = Color(0xFF101519)
+val SafetyDarkCard = Color(0xFF1C242B)
+val SafetyDarkBorder = Color(0xFF35414A)
+val SafetyDarkTextPrimary = Color(0xFFF4F6F7)
+val SafetyDarkTextSecondary = Color(0xFFA7B0B7)
+
+// Risk-communication fill colors — identical in both themes, always paired
+// with a text/icon label, never color alone. Used for solid chip/bar fills.
+val RiskLow = Color(0xFF66BB6A)
+val RiskMedium = Color(0xFFFFD54F)
+val RiskHigh = Color(0xFFFB8C00)
+val RiskVeryHigh = Color(0xFFE64A19)
+
+// Risk "ink" colors — theme-adjusted so risk text/borders/icons stay AA-legible
+// on their background: darker on light surfaces, lighter on dark surfaces.
+val RiskLowInkLight = Color(0xFF2E7D32)
+val RiskMediumInkLight = Color(0xFF7A5600)
+val RiskHighInkLight = Color(0xFFB34700)
+val RiskVeryHighInkLight = Color(0xFFB3341A)
+
+val RiskLowInkDark = Color(0xFF66BB6A)
+val RiskMediumInkDark = Color(0xFFFFD54F)
+val RiskHighInkDark = Color(0xFFFB8C00)
+val RiskVeryHighInkDark = Color(0xFFFF7043)
 
 // Light theme's surface-container tonal scale — used by stock components
 // (ModalBottomSheet, dialogs, menus) that don't take an explicit color.
 // Pinned explicitly so none of them ever fall back to Material's purple
-// baseline. A subtle navy-neutral ramp, lowest (dimmest) to highest
-// (brightest); "lowest"/"bright" both land on white, same as stock schemes.
-val SafetySurfaceDim = Color(0xFFD8DEE3)
+// baseline.
+val SafetySurfaceDim = Color(0xFFE7E9EB)
 val SafetySurfaceContainerLowest = Color(0xFFFFFFFF)
-val SafetySurfaceContainerLow = Color(0xFFFBFCFD)
-val SafetySurfaceContainer = Color(0xFFF3F5F7)
-val SafetySurfaceContainerHigh = Color(0xFFEDF0F3)
-val SafetySurfaceContainerHighest = Color(0xFFE7EBEE)
+val SafetySurfaceContainerLow = Color(0xFFFAFBFB)
+val SafetySurfaceContainer = Color(0xFFF1F3F4)
+val SafetySurfaceContainerHigh = Color(0xFFEBEDEF)
+val SafetySurfaceContainerHighest = Color(0xFFE4E7E9)
 
-// Dark theme palette — deliberately tuned for a dark navy product, not a
-// mechanical inversion of the light palette.
-val SafetyDarkBackground = Color(0xFF0F1D27) // near-navy app background
-val SafetyDarkSurface = Color(0xFF1B2E3B) // slightly lighter navy: cards
-val SafetyDarkPrimaryCard = Color(0xFF0B2C2C) // deep teal-navy: the one hero card
-val SafetyDarkTextPrimary = Color(0xFFF1F5F8) // high-contrast off-white
-val SafetyDarkTextSecondary = Color(0xFF9DAFBE) // muted blue-grey secondary text
-val SafetyTealBright = Color(0xFF3FD6C0) // brighter, accessible teal for dark backgrounds
-val SafetyDarkOutline = Color(0xFF2E4552) // subtle but visible border
-
-// Dark theme's surface-container tonal scale — the same navy hue family as
-// SafetyDarkSurface, stepped lighter. This is what fixes the purple/brown
-// default tint on the dark ModalBottomSheet (it uses surfaceContainerLow).
-val SafetyDarkSurfaceDim = Color(0xFF0A1620)
-val SafetyDarkSurfaceContainerLowest = Color(0xFF0B1B24)
-val SafetyDarkSurfaceContainerLow = Color(0xFF16262F)
-val SafetyDarkSurfaceContainerHigh = Color(0xFF223846)
-val SafetyDarkSurfaceContainerHighest = Color(0xFF294252)
+// Dark theme's surface-container tonal scale — same charcoal hue family as
+// SafetyDarkCard, stepped lighter.
+val SafetyDarkSurfaceDim = Color(0xFF0D1114)
+val SafetyDarkSurfaceContainerLowest = Color(0xFF0D1216)
+val SafetyDarkSurfaceContainerLow = Color(0xFF171E24)
+val SafetyDarkSurfaceContainerHigh = Color(0xFF242D35)
+val SafetyDarkSurfaceContainerHighest = Color(0xFF2B353D)

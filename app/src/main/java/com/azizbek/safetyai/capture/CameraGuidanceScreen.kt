@@ -31,10 +31,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.azizbek.safetyai.ui.components.SafetyPrimaryButton
+import com.azizbek.safetyai.ui.components.StepProgressBar
 import com.azizbek.safetyai.ui.theme.SafetyAITheme
 
 private data class GuidanceItem(val icon: ImageVector, val text: String)
@@ -52,20 +52,26 @@ fun CameraGuidanceScreen(onBack: () -> Unit, onOpenCamera: () -> Unit) {
     Scaffold(
         topBar = {
             Surface(color = MaterialTheme.colorScheme.background) {
-                Row(modifier = Modifier.padding(end = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
+                Column {
+                    Row(modifier = Modifier.padding(end = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "Camera setup",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Text("Step 3 of 5", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
-                    Text(
-                        text = "Record the worker's task",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
+                    StepProgressBar(currentStep = 3, totalSteps = 5, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 }
             }
         },
@@ -75,7 +81,9 @@ fun CameraGuidanceScreen(onBack: () -> Unit, onOpenCamera: () -> Unit) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                     Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SafetyPrimaryButton(text = "Open camera", onClick = onOpenCamera, modifier = Modifier.fillMaxWidth())
-                        TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Back") }
+                        TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                            Text("Back", color = MaterialTheme.colorScheme.onBackground)
+                        }
                     }
                 }
             }
@@ -102,7 +110,7 @@ fun CameraGuidanceScreen(onBack: () -> Unit, onOpenCamera: () -> Unit) {
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(item.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Icon(item.icon, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground)
                     }
                     Text(
                         text = item.text,

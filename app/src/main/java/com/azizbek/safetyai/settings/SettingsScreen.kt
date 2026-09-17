@@ -89,7 +89,9 @@ fun SettingsScreen(
             SettingsSection(title = "Data and storage") {
                 SettingsRow("Local assessments", "$assessmentCount")
                 SettingsRow("Managed video storage", formatSize(storageBytes))
-                TextButton(onClick = { viewModel.clearTemporaryFiles() }) { Text("Clear temporary files") }
+                TextButton(onClick = { viewModel.clearTemporaryFiles() }) {
+                    Text("Clear temporary files", color = MaterialTheme.colorScheme.onBackground)
+                }
                 TextButton(onClick = { showDeleteAllDialog = true }) {
                     Text("Delete all local assessments", color = MaterialTheme.colorScheme.error)
                 }
@@ -127,7 +129,11 @@ fun SettingsScreen(
                     Text("Delete everything", color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { showDeleteAllDialog = false }) { Text("Cancel") } }
+            dismissButton = {
+                TextButton(onClick = { showDeleteAllDialog = false }) {
+                    Text("Cancel", color = MaterialTheme.colorScheme.onBackground)
+                }
+            }
         )
     }
 }
