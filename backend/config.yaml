@@ -1,0 +1,143 @@
+# SafetyAI backend pipeline configuration.
+#
+# Every path or parameter that might change later (checkpoint swap, moving the
+# research data drive, retuning a threshold) lives here. app_pipeline/*.py must
+# never hardcode one of these — see README.md "Swapping the checkpoint".
+#
+# Canonical dependency: REBA_Engine (angle calculation, REBA Tables A/B/C
+# scoring, static/repetition/rapid-motion Activity Layer detectors), read
+# live from research_data_root below. Step 1-3 (video -> RTMPose 2D ->
+# 21-joint mapping) runs a VENDORED, byte-identical copy of SyncApp's
+# implementation under backend/vendor/rtmpose/ (see that folder's
+# PROVENANCE.md) — REBA_Engine has no 2D pose-extraction module of its own.
+# This backend has NO runtime dependency on the live SyncApp project.
+
+# Root of the research project. Read-only from this backend's point of view —
+# nothing under app_pipeline/ ever writes here.
+research_data_root: "C:/Users/tempadmin/Research DATA"
+
+# Active PoseMamba checkpoint.
+#
+# TEMPORARY: exp05_5fold_cv fold1 (test subjects SUB01/SUB02). This is a
+# cross-validation fold checkpoint, not the final deployment model — it is a
+# stand-in so the app pipeline can be built and tested while the real
+# deployment checkpoint (9-subject train / SUB04-val, started 2026-09-17
+# 16:38, see PoseMamba/experiments/deployment_training/) finishes training.
+#
+# TO SWAP: change `path` below to
+#   PoseMamba/experiments/deployment_training/checkpoints/<run>/best_epoch.bin
+# once that run completes. Nothing else in this backend needs to change —
+# num_frame/embed_dim_ratio/depth/mlp_ratio are identical across every
+# experiment in this family (see each experiment's config.yaml).
+checkpoint:
+  path: "PoseMamba/experiments/exp05_5fold_cv/checkpoints/fold1/exp05_fold1_2026_09_15_T_11_23_07/best_epoch.bin"
+  label: "exp05_5fold_cv fold1 (TEMPORARY — not the final SUB01-SUB10 deployment checkpoint)"
+  state_dict_key: "model_pos"
+  num_frame: 243
+  embed_dim_ratio: 128
+  depth: 10
+  mlp_ratio: 2.0
+
+# PoseMamba's SelectiveScan CUDA kernel has no CPU fallback (see README.md /
+# the ONNX-TFLite-NNAPI compatibility audit). "cuda" is the only value that
+# currently works.
+device: "cuda"
+
+# 21-joint canonical order the model was trained on. Identical, in both
+# content and order, to REBA_Engine/reba/joint_mapping.py::JOINT_NAMES
+# (verified directly against that file — PELCEN at index 3 in both). Also
+# matches PoseMamba/lib/model/loss_construction.py and
+# SyncApp/backend/core/dataset_export.py.
+canonical_joints:
+  - HD
+  - C7
+  - T10
+  - PELCEN
+  - LSHO
+  - RSHO
+  - LELB
+  - RELB
+  - LWR
+  - RWR
+  - LHAND
+  - RHAND
+  - LHIP
+  - RHIP
+  - LKNE
+  - RKNE
+  - LANK
+  - RANK
+  - LTOE
+  - RTOE
+  - L45
+root_joint: "PELCEN"
+
+# Activity Layer (pipeline step 8). static/rapid-motion thresholds are NOT
+# configured here — REBA_Engine/activity_layer/static.py and rapid_change.py
+# use their own frozen constants (REBA_Engine/activity_layer/constants.py):
+# static tolerance +/-5deg (LITERATURE_DERIVED, Frost et al. 2026), static
+# duration >60s strict (REBA_PUBLISHED). Only the two values below are this
+# pipeline's own deliberate overrides of a REBA_Engine default, both traced
+# to REBA_Engine/experiments/activity_logic_ablation/configs/recommended_configs.json:
+activity_layer:
+  rapid_motion:
+    # Ablation-recommended override of rapid_change.py's own default
+    # (min_velocity_deg_s=45.0 -> 60.0). excursion_thresh=20.0 is already
+    # rapid_change.py's own default (RAPID_EVENT_MIN_EXCURSION_DEG) — listed
+    # explicitly here so both halves of the recommended config are visible
+    # together. EXPLORATORY STATUS (not to be silently dropped — see
+    # FINDINGS.md): selected via grid search on SUB04, the same single
+    # participant every prior rapid-detector decision (A1/A2/B) was already
+    # made on; not part of a broad stable plateau (e=10 at v=60 collapses
+    # accuracy; v=45/e=30 trades sensitivity for specificity instead of
+    # improving both). Re-check once more participants are annotated.
+    velocity_threshold_deg_s: 60.0
+    excursion_threshold_deg: 20.0
+  repetition:
+    # H3 cross-channel duplicate-event merging — REBA_Engine's own ablation
+    # result (FINDINGS.md): DEV MAE 1.429->1.143, TEST MAE 3.167->2.000, both
+    # improve on data never inspected while selecting it. NOT YET wired into
+    # REBA_Engine/activity_layer/activity_score.py itself (that module still
+    # calls the frozen single-channel select_channel_and_count() unmodified);
+    # this pipeline's activity_layer.py reimplements the H3 assembly exactly
+    # as REBA_Engine/experiments/activity_logic_ablation/scripts/02_repetition_variants.py
+    # does it, calling ONLY repetition_bout_counter.py's frozen internals
+    # (_noise_floor/detect_bouts/_estimate_thresholds/_count_cycles_in_bout).
+    merge_tolerance_s: 0.3
+
+# Manual REBA inputs this pipeline does not yet receive from the Android app
+# (no app-side UI for them exists yet — see README.md). These are the
+# pipeline's own conservative, documented ASSUMPTION defaults, not observed
+# facts — every one of them is a REQUIRED argument to
+# REBA_Engine/reba/scorer.py::score_frame(), which has no default of its own
+# (by that module's own explicit design: "there is no value that quietly
+# means 'not applicable' for a condition that IS observable and must be
+# stated"). Overridable per-call by run_pipeline() once the app collects them.
+manual_reba_defaults:
+  load_kg: 0.0
+  load_shock: false
+  coupling: 0        # 0=good, 1=fair, 2=poor/unacceptable
+  unilateral: false  # true if the worker is bearing weight on one leg only
+  shoulder_raised_r: false
+  shoulder_raised_l: false
+  supported_or_leaning_r: false
+  supported_or_leaning_l: false
+  # The four structurally-unsupported modifiers: null is the HONEST default
+  # (score_frame()'s own convention) meaning "no reference value available",
+  # not "confirmed not firing" — contributes to fully_evaluated=False and
+  # unsupported_components, never silently scored as False.
+  neck_twist_modifier: null
+  upper_arm_rotated_r: null
+  upper_arm_rotated_l: null
+  wrist_deviation_r: null
+  wrist_deviation_l: null
+  # Passed to REBA_Engine's repetition/rapid-motion detectors, not scorer.py.
+  is_locomotion_task: false
+  unstable_base: false
+
+# Conditional final REBA (pipeline step 9). App-layer only — REBA_Engine's
+# reba/scorer.py and activity_layer/*.py are never modified.
+#   activity_score          = int(static_flag) + int(repetition_flag) + int(rapid_change_flag)
+#   final_conditional_reba  = min(15, table_c_score + activity_score)
+conditional_reba:
+  max_score: 15

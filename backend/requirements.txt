@@ -1,0 +1,10 @@
+# Installed into the WSL `posemamba` conda env (PoseMamba's SelectiveScan CUDA
+# kernel has no CPU fallback — this backend cannot run outside that env).
+# torch/torchvision/mamba-ssm etc. are already in that env from PoseMamba's
+# own setup; only what this backend adds on top is listed here.
+pyyaml>=6.0
+rtmlib
+onnxruntime-gpu
+opencv-python
+scipy       # REBA_Engine/activity_layer/kinematics.py + repetition_bout_counter.py
+pandas      # REBA_Engine/pipeline.py
