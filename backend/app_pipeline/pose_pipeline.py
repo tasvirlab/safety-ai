@@ -11,6 +11,13 @@ Reuses validated research code (never modified):
     SyncApp's implementation (rather than depending on the live SyncApp
     project) was the way to remove that runtime dependency while keeping the
     exact same, unmodified 2D-detection behavior.
+  - 2D normalization (PoseMamba's temporal input prep): a VENDORED, verbatim
+    EXTRACT of SyncApp/backend/core/dataset_export.py's normalize_2d()
+    function (not the whole file — that file's other responsibilities are
+    dataset-building/train-test-splitting, out of scope for deployment) under
+    `vendor/rtmpose/normalize_2d.py`, imported via `.rtmpose_adapter`. Same
+    root-center-by-PELCEN, divide-by-half-width transform as before, now
+    calling SyncApp's actual code instead of a re-derived equivalent.
   - 3D lift: PoseMamba/lib/model/PoseMamba_Construction.py + the checkpoint
     named in config.yaml (same model class REBA_Engine/predict/
     run_posemamba_trial.py itself loads — a neutral, third dependency, not
@@ -112,26 +119,82 @@ def get_model(cfg: PipelineConfig):
     return _model_cache[key]
 
 
-def _reorder_to_canonical(df, canonical_joints: tuple[str, ...]) -> np.ndarray:
+# The ACTUAL PoseMamba training joint order, hardcoded here from
+# SyncApp/backend/core/dataset_export.py lines 46-50 (the module that built
+# the real training .npz files via make_windows()/stack_windows() — NOT
+# vendored, per explicit instruction, but this literal name list is read
+# off it and frozen here as an independent reference so a future drift in
+# config.yaml's canonical_joints is CAUGHT rather than silently trusted).
+# Deliberately duplicated from config.yaml rather than only comparing
+# config.yaml to itself — see _assert_training_joint_order() below.
+_POSEMAMBA_TRAINING_JOINT_ORDER: tuple[str, ...] = (
+    "HD", "C7", "T10", "PELCEN", "LSHO", "RSHO", "LELB", "RELB", "LWR", "RWR",
+    "LHAND", "RHAND", "LHIP", "RHIP", "LKNE", "RKNE", "LANK", "RANK",
+    "LTOE", "RTOE", "L45",
+)
+assert _POSEMAMBA_TRAINING_JOINT_ORDER.index("PELCEN") == 3, (
+    "internal error: the hardcoded PoseMamba training order must have PELCEN at index 3"
+)
+
+
+def _assert_training_joint_order(cfg: PipelineConfig) -> None:
+    """Hard assertion, run once per pipeline call: config.yaml's
+    canonical_joints — the order every 2D/3D array in this file is built and
+    consumed in — must exactly equal the real PoseMamba training order.
+    Raises immediately (not a silent reorder) if they ever diverge, since a
+    silent mismatch here would feed PoseMamba a tensor whose joint axis means
+    something different from what it was trained on."""
+    if tuple(cfg.canonical_joints) != _POSEMAMBA_TRAINING_JOINT_ORDER:
+        raise AssertionError(
+            f"config.yaml's canonical_joints does not match the PoseMamba "
+            f"training joint order.\n  canonical_joints: {cfg.canonical_joints}\n"
+            f"  training order:   {_POSEMAMBA_TRAINING_JOINT_ORDER}"
+        )
+
+
+def _reorder_index(vendored_joint_names: tuple[str, ...], canonical_joints: tuple[str, ...]) -> list[int]:
+    """EXPLICIT reorder index: reorder_index[j] is the vendored module's own
+    JOINT_NAMES position of canonical_joints[j] — i.e. the permutation
+    _reorder_to_canonical() applies (there, done by column NAME; this
+    function makes that same permutation an explicit, inspectable/testable
+    array, and pose_pipeline.py cross-checks the two agree — see
+    _reorder_to_canonical()'s own assertion below)."""
+    return [vendored_joint_names.index(name) for name in canonical_joints]
+
+
+def _reorder_to_canonical(df, canonical_joints: tuple[str, ...], vendored_joint_names: tuple[str, ...]) -> np.ndarray:
     """rtmpose_pipeline's per-frame <JOINT>_X/_Y columns -> (F, 21, 2) px, in
     config.yaml's canonical_joints order (= REBA_Engine's joint_mapping.
-    JOINT_NAMES order — NOT rtmpose_pipeline.JOINT_NAMES's own order, e.g.
-    PELCEN is index 12 there vs. 3 here; training used the order in config.yaml)."""
+    JOINT_NAMES order = the real PoseMamba training order — NOT
+    rtmpose_pipeline.JOINT_NAMES's own order, e.g. PELCEN is index 12 there
+    vs. 3 here). The reorder itself is done by COLUMN NAME (df[f"{name}_X"]),
+    which is correct regardless of the vendored module's internal ordering;
+    the explicit integer _reorder_index() above is computed and cross-checked
+    against this name-based result as a second, independent confirmation —
+    see the assertion below."""
     n_frames = len(df)
     out = np.full((n_frames, len(canonical_joints), 2), np.nan)
     for j, name in enumerate(canonical_joints):
         out[:, j, 0] = df[f"{name}_X"].to_numpy()
         out[:, j, 1] = df[f"{name}_Y"].to_numpy()
+
+    # Cross-check: the name-based column lookup above must agree EXACTLY
+    # with the explicit index-based permutation, for every joint present as
+    # a plain <NAME>_X column in `df` (i.e. every entry of
+    # `vendored_joint_names` — df may carry OTHER columns too, e.g. _conf/
+    # _valid/frame/subject_*, which this check does not touch).
+    reorder_index = _reorder_index(vendored_joint_names, canonical_joints)
+    vendored_px = np.stack(
+        [np.stack([df[f"{n}_X"].to_numpy(), df[f"{n}_Y"].to_numpy()], axis=-1) for n in vendored_joint_names],
+        axis=1,
+    )  # (F, len(vendored_joint_names), 2), in vendored_joint_names order
+    permuted = vendored_px[:, reorder_index, :]
+    if not np.array_equal(out, permuted, equal_nan=True):
+        raise AssertionError(
+            "internal error: name-based column reorder and the explicit "
+            "integer reorder_index() disagree — this must never happen."
+        )
     return out
-
-
-def _normalize_2d(pos2d_px: np.ndarray, width: int, root_idx: int) -> np.ndarray:
-    """Root-center on the pelvis, divide both axes by width/2 (same divisor
-    for both axes, so aspect ratio is preserved) — the exact transform the
-    model was trained under, re-derived identically by both SyncApp's
-    dataset_export.py and REBA_Engine/predict/run_posemamba_trial.py::normalize_2d()."""
-    root = pos2d_px[:, root_idx, :]
-    return (pos2d_px - root[:, None, :]) / (width / 2.0)
 
 
 def _make_window_starts(t: int, window_size: int) -> list[int]:
@@ -166,9 +229,17 @@ def run_pose_pipeline(
     reba_scoring.py and activity_layer.py.
     """
     _register_research_paths(cfg)
-    from .rtmpose_adapter import run_on_video  # vendored SyncApp copy — see vendor/rtmpose/PROVENANCE.md
+    from .rtmpose_adapter import JOINT_NAMES as VENDORED_JOINT_NAMES  # vendored SyncApp order — see vendor/rtmpose/PROVENANCE.md
+    from .rtmpose_adapter import normalize_2d, run_on_video  # vendored SyncApp copies — see vendor/rtmpose/PROVENANCE.md
     from reba import angles as reba_angles  # REBA_Engine
     from reba import joint_mapping as jm  # REBA_Engine
+
+    _assert_training_joint_order(cfg)
+    assert tuple(jm.JOINT_NAMES) == tuple(cfg.canonical_joints), (
+        f"REBA_Engine/reba/joint_mapping.JOINT_NAMES no longer matches "
+        f"config.yaml's canonical_joints — {tuple(jm.JOINT_NAMES)} != "
+        f"{tuple(cfg.canonical_joints)}"
+    )
 
     video_path = Path(video_path)
     if not video_path.exists():
@@ -193,8 +264,17 @@ def run_pose_pipeline(
     fps = float(cap.get(cv2.CAP_PROP_FPS)) or 30.0
     cap.release()
 
-    pos2d_px = _reorder_to_canonical(df2d, cfg.canonical_joints)
-    pos2d_norm = _normalize_2d(pos2d_px, width, cfg.root_idx)
+    pos2d_px = _reorder_to_canonical(df2d, cfg.canonical_joints, tuple(VENDORED_JOINT_NAMES))
+    # Vendored normalize_2d() hardcodes ROOT_IDX=3 internally (from
+    # dataset_export.py's own canonical JOINT_NAMES) — assert config.yaml's
+    # canonical_joints agrees, rather than silently relying on both landing
+    # on the same value by coincidence.
+    assert cfg.root_idx == 3, (
+        f"config.yaml's root_idx is {cfg.root_idx}, but the vendored "
+        f"normalize_2d() hardcodes PELCEN at index 3 (see vendor/rtmpose/"
+        f"normalize_2d.py) — canonical_joints must keep PELCEN at index 3."
+    )
+    pos2d_norm, pos2d_frame_valid = normalize_2d(pos2d_px, width)
 
     total_frames = len(pos2d_norm)
     window = cfg.checkpoint.num_frame
@@ -212,10 +292,12 @@ def run_pose_pipeline(
     with torch.no_grad():
         for w, start in enumerate(window_starts):
             chunk = pos2d_norm[start:start + window]
-            if np.isnan(chunk).any():
-                # Subject not found for at least one frame in this window —
-                # never feed a partially-NaN window through the model. Left
-                # NaN in pred_3d_m; a deployment adaptation over
+            if not pos2d_frame_valid[start:start + window].all():
+                # Subject not found for at least one frame in this window
+                # (vendored normalize_2d()'s own per-frame validity mask —
+                # all joints finite AND pelvis finite) — never feed a
+                # partially-NaN window through the model. Left NaN in
+                # pred_3d_m; a deployment adaptation over
                 # run_posemamba_trial.py's own "raise on any NaN 2D input"
                 # rule, which assumes clean research-trial input.
                 skipped_windows.append(w)

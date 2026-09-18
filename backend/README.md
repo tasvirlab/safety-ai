@@ -95,6 +95,9 @@ backend/
       PROVENANCE.md          # original paths, SHA-256 checksums, license/source disclosure
       verify_checksums.py    # standalone re-verification, no backend dependency
       core/, utils/          # the vendored files themselves — never import from here directly, use rtmpose_adapter.py
+      normalize_2d.py        # verbatim EXTRACT of dataset_export.py's normalize_2d() (not a whole-file copy — see PROVENANCE.md)
+  tests/
+    test_rtmpose_mapping.py # deterministic, video-free synthetic test of the vendored 133->21 mapping + normalize_2d()
   scripts/
     run_on_video.py         # CLI test harness
 ```

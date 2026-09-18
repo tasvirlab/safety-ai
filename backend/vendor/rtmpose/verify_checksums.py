@@ -21,6 +21,13 @@ EXPECTED: dict[str, str] = {
     "core/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "utils/task_paths.py": "d2e4011097ffc885c11dd89c3f03726f4ad5920e23766ab287ec0cead48a3060",
     "utils/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    # NOT a whole-file copy of dataset_export.py — a verbatim EXTRACT of just
+    # normalize_2d() + its required constants (see that file's own docstring
+    # and PROVENANCE.md). This hash detects drift of the EXTRACT itself
+    # (my own header/footer + the copied code together), not equivalence to
+    # the full source file — the copied blocks were separately diff-verified
+    # against dataset_export.py line-for-line at extraction time.
+    "normalize_2d.py": "d46b38a7b4a3d3ba3f6e5a48e292965387ea1388aac89cead83ae2e4e8ef98cc",
 }
 
 
