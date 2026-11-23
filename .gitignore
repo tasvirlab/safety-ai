@@ -47,3 +47,8 @@ keystore.properties
 local.properties
 posemamba_deployment/android/posemamba-scan/src/*/assets/fixtures/
 posemamba_deployment/android/posemamba-scan/src/*/assets/model/
+
+# Research-derived data (golden fixtures, run outputs)
+backend/test_runs/
+app/src/androidTest/assets/rtmpose_golden/
+app/src/androidTest/assets/reba/

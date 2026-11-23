@@ -88,7 +88,7 @@ Requirements: Android Studio with JDK 17+, Android SDK 37, an NDK and CMake 3.22
 
 ### Instrumented tests
 
-`./gradlew connectedDebugAndroidTest` needs a physical device, the model files, and short test videos in `app/src/androidTest/assets/video/` (`decoder_30_rotated.mp4`, `decoder_60.mp4`, `real_lifting_*.mp4`). Videos and participant recordings are deliberately excluded from the repository.
+`./gradlew connectedDebugAndroidTest` needs a physical device, the model files, and short test videos in `app/src/androidTest/assets/video/` (`decoder_30_rotated.mp4`, `decoder_60.mp4`, `real_lifting_*.mp4`). Videos, participant recordings, and research-derived golden fixtures (`rtmpose_golden/`, `reba/` under `app/src/androidTest/assets/`) are deliberately excluded from the repository; the tests that depend on them cannot run from a clean checkout.
 
 ## Data and privacy
 
