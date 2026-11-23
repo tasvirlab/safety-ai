@@ -52,3 +52,6 @@ posemamba_deployment/android/posemamba-scan/src/*/assets/model/
 backend/test_runs/
 app/src/androidTest/assets/rtmpose_golden/
 app/src/androidTest/assets/reba/
+
+# Local Claude Code settings
+.claude/settings.local.json
