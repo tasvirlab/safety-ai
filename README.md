@@ -5,6 +5,18 @@ Android application for ergonomic risk assessment of construction tasks. A worke
 > Status: research prototype. Not a certified safety or medical tool.
 > Copyright (c) TasvirLab. All rights reserved. No license is granted.
 
+## Screenshots
+
+Captured on an Android emulator (light theme, empty state, no analysis data).
+
+| Home | New assessment | History |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/home.png" width="220"> | <img src="docs/screenshots/new-assessment.png" width="220"> | <img src="docs/screenshots/history.png" width="220"> |
+
+| Reports | Settings |
+|:---:|:---:|
+| <img src="docs/screenshots/reports.png" width="220"> | <img src="docs/screenshots/settings.png" width="220"> |
+
 ## Analysis pipeline
 
 ```
