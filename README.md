@@ -7,15 +7,13 @@ Android application for ergonomic risk assessment of construction tasks. A worke
 
 ## Screenshots
 
-Captured on an Android emulator (light theme, empty state, no analysis data).
+Captured on an Android emulator with no analysis data.
 
 | Home | New assessment | History |
 |:---:|:---:|:---:|
-| <img src="docs/screenshots/home.png" width="220"> | <img src="docs/screenshots/new-assessment.png" width="220"> | <img src="docs/screenshots/history.png" width="220"> |
-
-| Reports | Settings |
-|:---:|:---:|
-| <img src="docs/screenshots/reports.png" width="220"> | <img src="docs/screenshots/settings.png" width="220"> |
+| <img src="docs/screenshots/home.png" width="200"> | <img src="docs/screenshots/new-assessment.png" width="200"> | <img src="docs/screenshots/history.png" width="200"> |
+| **Reports** | **Settings** | **Home (dark)** |
+| <img src="docs/screenshots/reports.png" width="200"> | <img src="docs/screenshots/settings.png" width="200"> | <img src="docs/screenshots/home-dark.png" width="200"> |
 
 ## Analysis pipeline
 
