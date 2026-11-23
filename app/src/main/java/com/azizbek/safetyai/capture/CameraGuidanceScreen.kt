@@ -1,7 +1,9 @@
 package com.azizbek.safetyai.capture
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,21 +32,25 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.azizbek.safetyai.ui.components.SafetyPrimaryButton
+import com.azizbek.safetyai.R
 import com.azizbek.safetyai.ui.components.StepProgressBar
 import com.azizbek.safetyai.ui.theme.SafetyAITheme
 
 private data class GuidanceItem(val icon: ImageVector, val text: String)
 
 private val guidanceItems = listOf(
-    GuidanceItem(Icons.Filled.PersonPin, "Keep the worker's full body visible"),
+    GuidanceItem(Icons.Filled.PersonPin, "Keep the full body, both hands and both feet visible"),
     GuidanceItem(Icons.Filled.VideoStable, "Keep the camera stable"),
     GuidanceItem(Icons.Filled.Accessibility, "Record one primary worker"),
-    GuidanceItem(Icons.Filled.CenterFocusStrong, "Keep the task and handled object visible"),
+    GuidanceItem(Icons.Filled.CenterFocusStrong, "Keep the worker inside the frame; about 3 m is only a starting guide"),
     GuidanceItem(Icons.Filled.LightMode, "Use adequate lighting")
 )
 
@@ -97,6 +104,12 @@ fun CameraGuidanceScreen(onBack: () -> Unit, onOpenCamera: () -> Unit) {
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            Image(
+                painter = painterResource(R.drawable.camera_setup_tripod),
+                contentDescription = "One worker filmed from the side with a phone on a tripod",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxWidth().aspectRatio(2f).clip(RoundedCornerShape(16.dp))
+            )
             Text(
                 text = "Before you record, keep these in mind. Following this guidance improves the video's usefulness — it doesn't guarantee analysis results.",
                 style = MaterialTheme.typography.bodyMedium,

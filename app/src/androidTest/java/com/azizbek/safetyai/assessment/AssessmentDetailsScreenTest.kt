@@ -68,7 +68,8 @@ class AssessmentDetailsScreenTest {
                 }
                 LoadCouplingScreen(
                     state = state,
-                    onLoadTextChange = { update { s -> s.copy(loadKgText = it, loadTouched = true) } },
+                    onLoadTextChange = { update { s -> s.withLoadText(it) } },
+                    onLoadCategorySelected = { update { s -> s.withLoadCategory(it) } },
                     onSuddenForceChange = { update { s -> s.copy(suddenForce = it) } },
                     onCouplingSelected = { update { s -> s.copy(coupling = it, couplingTouched = true) } },
                     onBack = onBack,
@@ -81,30 +82,30 @@ class AssessmentDetailsScreenTest {
     @Test
     fun jobDetails_titleAndStep_areCorrect() {
         setJobDetailsContent()
-        composeTestRule.onNodeWithText("Job details").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Task details").assertIsDisplayed()
         composeTestRule.onNodeWithText("Step 1 of 5").assertIsDisplayed()
     }
 
     @Test
     fun jobDetails_continueButton_isInitiallyDisabled() {
         setJobDetailsContent()
-        composeTestRule.onNodeWithText("Continue").assertIsNotEnabled()
+        composeTestRule.onNodeWithText("Next").assertIsNotEnabled()
     }
 
     @Test
     fun jobDetails_otherTaskField_isOnlyVisibleWhenOtherSelected() {
         setJobDetailsContent()
         composeTestRule.onNodeWithText("Describe the task").assertDoesNotExist()
-        composeTestRule.onNodeWithText("Select a task type").performClick()
+        composeTestRule.onNodeWithText("Select a task").performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithText("Other").performClick()
+        composeTestRule.onNodeWithText("Other construction task").performClick()
         composeTestRule.onNodeWithText("Describe the task").assertIsDisplayed()
     }
 
     @Test
     fun jobDetails_darkTheme_rendersWithoutCrashing() {
         setJobDetailsContent(darkTheme = true)
-        composeTestRule.onNodeWithText("Job details").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Task details").assertIsDisplayed()
         composeTestRule.onNodeWithText("Work area").assertIsDisplayed()
     }
 
@@ -152,7 +153,7 @@ class AssessmentDetailsScreenTest {
     @Test
     fun loadCoupling_continueButton_isInitiallyDisabled() {
         setLoadCouplingContent()
-        composeTestRule.onNodeWithText("Continue").assertIsNotEnabled()
+        composeTestRule.onNodeWithText("Next").assertIsNotEnabled()
     }
 
     @Test
@@ -167,10 +168,11 @@ class AssessmentDetailsScreenTest {
     fun loadCoupling_fillingLoadAndCoupling_enablesContinueAndProducesDraft() {
         var producedDraft: AssessmentDraft? = null
         setLoadCouplingContent(onContinue = { producedDraft = it })
-        composeTestRule.onNodeWithText("Load handled").performTextInput("8")
+        composeTestRule.onNodeWithText("5–10 kg").performClick()
         composeTestRule.onNodeWithText("Good").performClick()
-        composeTestRule.onNodeWithText("Continue").performClick()
+        composeTestRule.onNodeWithText("Next").performClick()
         assertTrue(producedDraft != null)
         assertTrue(producedDraft?.taskType == TaskType.LIFTING)
+        assertTrue(producedDraft?.loadIsCategory == true)
     }
 }

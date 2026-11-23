@@ -44,7 +44,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.azizbek.safetyai.analysis.SafetyAnalysisEngine
 import com.azizbek.safetyai.assessment.label
+import com.azizbek.safetyai.assessment.loadDisplay
 import com.azizbek.safetyai.data.repository.AssessmentRepository
+import com.azizbek.safetyai.data.result.AnalysisResultStore
 import com.azizbek.safetyai.domain.Assessment
 import com.azizbek.safetyai.domain.AssessmentStatus
 import com.azizbek.safetyai.domain.label
@@ -59,6 +61,7 @@ import java.util.Locale
 fun AssessmentDetailScreen(
     repository: AssessmentRepository,
     analysisEngine: SafetyAnalysisEngine,
+    analysisResultStore: AnalysisResultStore,
     assessmentId: String,
     onBack: () -> Unit,
     onEdit: (String) -> Unit,
@@ -66,10 +69,11 @@ fun AssessmentDetailScreen(
     onDeleted: () -> Unit,
     onViewReport: (String) -> Unit,
     viewModel: AssessmentDetailViewModel = viewModel(
-        factory = AssessmentDetailViewModel.factory(repository, analysisEngine, assessmentId)
+        factory = AssessmentDetailViewModel.factory(repository, analysisEngine, analysisResultStore, assessmentId)
     )
 ) {
     val assessment by viewModel.assessment.collectAsState()
+    val analysisState by viewModel.analysisState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showUnavailableDialog by remember { mutableStateOf(false) }
 
@@ -119,7 +123,8 @@ fun AssessmentDetailScreen(
                 DetailSection(
                     title = "Load and grip",
                     rows = listOf(
-                        "Load handled" to "${formatLoad(current.loadKg)} kg",
+                        (if (current.loadIsCategory) "Load category" else "Load handled") to
+                            loadDisplay(current.loadKg, current.loadIsCategory),
                         "Sudden or rapid force" to if (current.suddenForce) "Yes" else "No",
                         "Grip and coupling" to current.coupling.label()
                     )
@@ -129,23 +134,33 @@ fun AssessmentDetailScreen(
                     rows = listOf(
                         "Duration" to formatDuration(current.video.durationMs),
                         "Resolution" to if (current.video.widthPx != null && current.video.heightPx != null) {
-                            "${current.video.widthPx}×${current.video.heightPx}"
+                            "${current.video.widthPx} x ${current.video.heightPx}"
                         } else "Unknown",
                         "File size" to formatFileSize(current.video.fileSizeBytes)
                     )
                 )
 
+                AnalysisStatusContent(analysisState)
+
                 Button(
                     onClick = {
-                        if (viewModel.analysisEngineAvailable) {
-                            // No build of this app ships a validated engine yet — nothing to wire here.
-                        } else {
-                            viewModel.requestAnalysis()
+                        viewModel.requestAnalysis()
+
+                        if (!viewModel.analysisEngineAvailable) {
                             showUnavailableDialog = true
                         }
                     },
+                    enabled = !analysisState.isRunning,
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Analyze assessment") }
+                ) {
+                    Text(
+                        if (analysisState.isRunning) {
+                            "Analyzing..."
+                        } else {
+                            "Analyze assessment"
+                        }
+                    )
+                }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     SafetyOutlinedButton(text = "Edit metadata", onClick = { onEdit(current.id) }, modifier = Modifier.weight(1f))
@@ -245,3 +260,53 @@ private fun formatDuration(ms: Long?): String {
     return String.format(Locale.US, "%02d:%02d", totalSeconds / 60, totalSeconds % 60)
 }
 private fun formatFileSize(bytes: Long): String = String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
+
+@Composable
+private fun AnalysisStatusContent(
+    state: AnalysisUiState
+) {
+    if (state.isRunning) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = state.stage ?: "Analyzing",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = "${(state.fractionComplete * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+
+            androidx.compose.material3.LinearProgressIndicator(
+                progress = {
+                    state.fractionComplete.coerceIn(0f, 1f)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+
+    state.error?.let { message ->
+        Text(
+            text = message,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+
+    state.result?.let { result ->
+        Text(
+            text = "Analysis completed. REBA score: ${result.reba.finalScore}",
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}

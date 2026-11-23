@@ -15,3 +15,35 @@
 local.properties
 __pycache__/
 *.pyc
+.kotlin/
+**/build/
+*.zip
+.idea/
+
+# Model binaries (documented in README, not versioned)
+*.onnx
+*.ort
+app/src/main/assets/models/
+
+# Test/research data: recordings, captures, run outputs
+*.mp4
+*.mov
+*.avi
+*.csv
+app/src/androidTest/assets/video/
+app/src/androidTest/assets/rtmpose_golden/frame_*.png
+backend/test_runs/**/*.json
+backend/test_runs/**/*.txt
+selective_scan_ndk/fixtures/
+posemamba_deployment/android/*/build/
+design_handoff/
+
+# Secrets
+*.jks
+*.keystore
+*.pem
+.env
+keystore.properties
+local.properties
+posemamba_deployment/android/posemamba-scan/src/*/assets/fixtures/
+posemamba_deployment/android/posemamba-scan/src/*/assets/model/

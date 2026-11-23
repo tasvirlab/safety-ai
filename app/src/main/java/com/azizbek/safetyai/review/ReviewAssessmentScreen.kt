@@ -49,6 +49,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.azizbek.safetyai.assessment.AssessmentDraft
 import com.azizbek.safetyai.assessment.label
+import com.azizbek.safetyai.assessment.loadDisplay
 import com.azizbek.safetyai.assessment.sourceLabel
 import com.azizbek.safetyai.domain.VideoMetadata
 import com.azizbek.safetyai.ui.components.SafetyOutlinedButton
@@ -211,7 +212,8 @@ fun ReviewAssessmentScreen(
             SummarySection(
                 title = "Load and grip",
                 rows = listOf(
-                    "Load handled" to "${formatLoad(draft.loadKg)} kg",
+                    (if (draft.loadIsCategory) "Load category" else "Load handled") to
+                        loadDisplay(draft.loadKg, draft.loadIsCategory),
                     "Sudden or rapid force" to if (draft.suddenForce) "Yes" else "No",
                     "Grip and coupling" to draft.coupling.label()
                 )

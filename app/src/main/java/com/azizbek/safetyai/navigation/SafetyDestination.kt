@@ -11,7 +11,7 @@ sealed class SafetyDestination(val route: String, val label: String, val icon: I
     data object Home : SafetyDestination("home", "Home", Icons.Filled.Home)
     // Route stays "sessions" — only the user-facing label changes to
     // "Assessments" — to avoid an unnecessary navigation-graph rename.
-    data object Sessions : SafetyDestination("sessions", "Assessments", Icons.Filled.History)
+    data object Sessions : SafetyDestination("sessions", "History", Icons.Filled.History)
     data object Reports : SafetyDestination("reports", "Reports", Icons.Filled.Assessment)
 
     companion object {

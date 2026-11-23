@@ -19,5 +19,7 @@ data class Assessment(
     val video: VideoMetadata,
     val status: AssessmentStatus,
     val createdAtEpochMs: Long,
-    val updatedAtEpochMs: Long
+    val updatedAtEpochMs: Long,
+    /** New category-only selection; false for legacy assessments with an exact kg value. */
+    val loadIsCategory: Boolean = false
 )

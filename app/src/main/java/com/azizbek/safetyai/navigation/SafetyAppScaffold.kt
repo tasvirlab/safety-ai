@@ -54,18 +54,26 @@ import com.azizbek.safetyai.capture.CameraRecordingScreen
 import com.azizbek.safetyai.detail.AssessmentDetailScreen
 import com.azizbek.safetyai.detail.EditAssessmentScreen
 import com.azizbek.safetyai.notifications.NotificationsScreen
+import com.azizbek.safetyai.reports.ReportDetailScreen
 import com.azizbek.safetyai.reports.ReportsScreen
 import com.azizbek.safetyai.review.ReviewAssessmentScreen
 import com.azizbek.safetyai.screens.HomeScreen
 import com.azizbek.safetyai.screens.SessionsScreen
 import com.azizbek.safetyai.settings.SettingsScreen
+import com.azizbek.safetyai.settings.FaqScreen
 import com.azizbek.safetyai.ui.components.SafetyHeader
 import com.azizbek.safetyai.upload.VideoUploadScreen
 import kotlinx.coroutines.launch
+private const val REPORT_DETAIL_ROUTE_PATTERN =
+    "report/{assessmentId}"
+
+private fun reportDetailRoute(
+    assessmentId: String
+): String = "report/$assessmentId"
 
 /**
  * App-wide Scaffold hosting the top bar, bottom nav, and NavHost. No
- * navigation drawer — bottom navigation already covers Home/Assessments/
+ * navigation drawer â€” bottom navigation already covers Home/Assessments/
  * Reports, and a drawer duplicating it was removed.
  */
 @Composable
@@ -76,7 +84,7 @@ fun SafetyAppScaffold() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     // Every screen in the New Assessment flow, plus assessment detail/edit/replace-video,
-    // notifications and settings, are full-screen — no bottom nav.
+    // notifications and settings, are full-screen â€” no bottom nav.
     val isChromeless = currentRoute != null && (
         NEW_ASSESSMENT_FLOW_ROUTES.any { currentRoute.startsWith(it) } ||
             CHROMELESS_ROUTE_PREFIXES.any { currentRoute.startsWith(it) }
@@ -129,11 +137,11 @@ fun SafetyAppScaffold() {
                 composable(SafetyDestination.Reports.route) {
                     ReportsScreen(
                         repository = container.assessmentRepository,
-                        onOpenReport = { /* unreachable: no assessment can be COMPLETED in this build */ }
+                        onOpenReport = { id -> navController.navigate(reportDetailRoute(id)) }
                     )
                 }
 
-                // The whole New Assessment flow — one NewAssessmentFlowViewModel instance,
+                // The whole New Assessment flow â€” one NewAssessmentFlowViewModel instance,
                 // scoped to this nested graph, shared by every screen inside it.
                 navigation(startDestination = ASSESSMENT_DETAILS_ROUTE_PATTERN, route = NEW_ASSESSMENT_FLOW_ROUTE) {
                     composable(
@@ -155,9 +163,11 @@ fun SafetyAppScaffold() {
                         val source = entry.arguments.toAssessmentSource()
                         // Shares the exact AssessmentFormViewModel instance step 1 created,
                         // by looking up that same back-stack entry via its route.
-                        val jobDetailsEntry = navController.getBackStackEntry(assessmentDetailsRoute(source))
+                        val jobDetailsEntry = remember(entry) {
+                            navController.getBackStackEntry(assessmentDetailsRoute(source))
+                        }
                         val formViewModel: AssessmentFormViewModel = viewModel(jobDetailsEntry)
-                        val flowViewModel = rememberFlowViewModel(navController, container)
+                        val flowViewModel = rememberFlowViewModel(navController, entry, container)
                         LoadCouplingRoute(
                             viewModel = formViewModel,
                             onBack = { navController.popBackStack() },
@@ -174,8 +184,8 @@ fun SafetyAppScaffold() {
                             onOpenCamera = { navController.navigate(CAMERA_RECORDING_ROUTE) }
                         )
                     }
-                    composable(CAMERA_RECORDING_ROUTE) {
-                        val flowViewModel = rememberFlowViewModel(navController, container)
+                    composable(CAMERA_RECORDING_ROUTE) { entry ->
+                        val flowViewModel = rememberFlowViewModel(navController, entry, container)
                         val coroutineScope = rememberCoroutineScope()
                         CameraRecordingScreen(
                             videoFileStore = container.videoFileStore,
@@ -189,8 +199,8 @@ fun SafetyAppScaffold() {
                             }
                         )
                     }
-                    composable(VIDEO_UPLOAD_ROUTE) {
-                        val flowViewModel = rememberFlowViewModel(navController, container)
+                    composable(VIDEO_UPLOAD_ROUTE) { entry ->
+                        val flowViewModel = rememberFlowViewModel(navController, entry, container)
                         VideoUploadScreen(
                             videoFileStore = container.videoFileStore,
                             onBack = { navController.popBackStack() },
@@ -200,8 +210,8 @@ fun SafetyAppScaffold() {
                             }
                         )
                     }
-                    composable(REVIEW_ASSESSMENT_ROUTE) {
-                        val flowViewModel = rememberFlowViewModel(navController, container)
+                    composable(REVIEW_ASSESSMENT_ROUTE) { entry ->
+                        val flowViewModel = rememberFlowViewModel(navController, entry, container)
                         val state by flowViewModel.state.collectAsStateWithLifecycle()
                         val draft = state.draft
                         val path = state.videoFilePath
@@ -239,12 +249,13 @@ fun SafetyAppScaffold() {
                     AssessmentDetailScreen(
                         repository = container.assessmentRepository,
                         analysisEngine = container.analysisEngine,
+                        analysisResultStore = container.analysisResultStore,
                         assessmentId = id,
                         onBack = { navController.popBackStack() },
                         onEdit = { navController.navigate(editAssessmentRoute(it)) },
                         onReplaceVideo = { navController.navigate(replaceVideoRoute(it)) },
                         onDeleted = { navController.popBackStack() },
-                        onViewReport = { /* unreachable: no assessment can be COMPLETED in this build */ }
+                        onViewReport = { id -> navController.navigate(reportDetailRoute(id)) }
                     )
                 }
                 composable(
@@ -286,6 +297,29 @@ fun SafetyAppScaffold() {
                         }
                     )
                 }
+                composable(
+                    route = REPORT_DETAIL_ROUTE_PATTERN,
+                    arguments = listOf(
+                        navArgument("assessmentId") {
+                            type = NavType.StringType
+                        }
+                    )
+                ) { entry ->
+                    val id = entry.arguments
+                        ?.getString("assessmentId")
+                        .orEmpty()
+
+                    ReportDetailScreen(
+                        repository =
+                            container.assessmentRepository,
+                        resultStore =
+                            container.analysisResultStore,
+                        assessmentId = id,
+                        onBack = {
+                            navController.popBackStack()
+                        }
+                    )
+                }
                 composable(NOTIFICATIONS_ROUTE) {
                     NotificationsScreen(repository = container.notificationRepository, onBack = { navController.popBackStack() })
                 }
@@ -294,8 +328,12 @@ fun SafetyAppScaffold() {
                         themePreferencesRepository = container.themePreferencesRepository,
                         assessmentRepository = container.assessmentRepository,
                         videoFileStore = container.videoFileStore,
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onFaq = { navController.navigate(FAQ_ROUTE) }
                     )
+                }
+                composable(FAQ_ROUTE) {
+                    FaqScreen(onBack = { navController.popBackStack() })
                 }
             }
         }
@@ -303,15 +341,16 @@ fun SafetyAppScaffold() {
 
 /**
  * The one [NewAssessmentFlowViewModel] instance shared by every screen in the
- * New Assessment nested graph — scoped to that graph's own back-stack entry
+ * New Assessment nested graph â€” scoped to that graph's own back-stack entry
  * so it's cleared as soon as the whole flow finishes or is abandoned.
  */
 @Composable
 private fun rememberFlowViewModel(
     navController: NavHostController,
+    entry: NavBackStackEntry,
     container: com.azizbek.safetyai.AppContainer
 ): NewAssessmentFlowViewModel {
-    val parentEntry: NavBackStackEntry = remember(navController.currentBackStackEntry) {
+    val parentEntry: NavBackStackEntry = remember(entry) {
         navController.getBackStackEntry(NEW_ASSESSMENT_FLOW_ROUTE)
     }
     return viewModel(
@@ -326,7 +365,7 @@ private fun Bundle?.toAssessmentSource(): AssessmentSource =
         ?.let { runCatching { AssessmentSource.valueOf(it) }.getOrNull() }
         ?: AssessmentSource.CAMERA
 
-/** Navigates without piling up duplicate back-stack entries — shared by the bottom bar. */
+/** Navigates without piling up duplicate back-stack entries â€” shared by the bottom bar. */
 private fun NavHostController.navigateToDestination(destination: SafetyDestination) {
     navigate(destination.route) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
@@ -367,7 +406,7 @@ private fun SafetyBottomBar(currentRoute: String?, onNavigate: (SafetyDestinatio
                     // TalkBack isn't made to read it twice.
                     icon = { Icon(destination.icon, contentDescription = null) },
                     label = { Text(destination.label) },
-                    // Selected icon/label stay charcoal (bold, always readable) — the
+                    // Selected icon/label stay charcoal (bold, always readable) â€” the
                     // yellow lives in the pill behind them, never as yellow text.
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.onBackground,

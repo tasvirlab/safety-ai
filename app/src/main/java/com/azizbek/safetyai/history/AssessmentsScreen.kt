@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -35,9 +36,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.azizbek.safetyai.assessment.TaskType
+import com.azizbek.safetyai.assessment.constructionTaskChoices
 import com.azizbek.safetyai.assessment.label
 import com.azizbek.safetyai.data.repository.AssessmentRepository
 import com.azizbek.safetyai.domain.Assessment
@@ -63,7 +66,7 @@ fun AssessmentsScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Assessments", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+            Text("History", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
             OutlinedTextField(
                 value = query,
                 onValueChange = { viewModel.searchQuery.value = it },
@@ -76,13 +79,23 @@ fun AssessmentsScreen(
                     cursorColor = MaterialTheme.colorScheme.onBackground
                 )
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TaskTypeFilterChip(selected = taskTypeFilter, onSelected = { viewModel.taskTypeFilter.value = it })
-                StatusFilterChip(selected = statusFilter, onSelected = { viewModel.statusFilter.value = it })
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TaskTypeFilterChip(
+                    selected = taskTypeFilter,
+                    onSelected = { viewModel.taskTypeFilter.value = it },
+                    modifier = Modifier.weight(1f)
+                )
+                StatusFilterChip(
+                    selected = statusFilter,
+                    onSelected = { viewModel.statusFilter.value = it },
+                    modifier = Modifier.weight(1.2f)
+                )
                 FilterChip(
                     selected = false,
                     onClick = { viewModel.sortNewestFirst.value = !newestFirst },
-                    label = { Text(if (newestFirst) "Newest first" else "Oldest first") }
+                    modifier = Modifier.weight(0.8f),
+                    label = { Text(if (newestFirst) "Newest" else "Oldest", maxLines = 1,
+                        softWrap = false, style = MaterialTheme.typography.labelMedium) }
                 )
             }
         }
@@ -153,13 +166,19 @@ private fun EmptyAssessments(onStartAssessment: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TaskTypeFilterChip(selected: TaskType?, onSelected: (TaskType?) -> Unit) {
+private fun TaskTypeFilterChip(selected: TaskType?, onSelected: (TaskType?) -> Unit, modifier: Modifier = Modifier) {
     var expanded by remember { mutableStateOf(false) }
-    Box {
-        FilterChip(selected = selected != null, onClick = { expanded = true }, label = { Text(selected?.label() ?: "Task type") })
+    Box(modifier) {
+        FilterChip(
+            selected = selected != null,
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(selected?.label() ?: "Task type", maxLines = 1,
+                overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium) }
+        )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(text = { Text("All task types") }, onClick = { onSelected(null); expanded = false })
-            TaskType.entries.forEach { type ->
+            constructionTaskChoices.forEach { type ->
                 DropdownMenuItem(text = { Text(type.label()) }, onClick = { onSelected(type); expanded = false })
             }
         }
@@ -168,15 +187,23 @@ private fun TaskTypeFilterChip(selected: TaskType?, onSelected: (TaskType?) -> U
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun StatusFilterChip(selected: AssessmentStatus?, onSelected: (AssessmentStatus?) -> Unit) {
+private fun StatusFilterChip(selected: AssessmentStatus?, onSelected: (AssessmentStatus?) -> Unit, modifier: Modifier = Modifier) {
     var expanded by remember { mutableStateOf(false) }
-    Box {
-        FilterChip(selected = selected != null, onClick = { expanded = true }, label = { Text(selected?.label() ?: "Status") })
+    Box(modifier) {
+        FilterChip(selected = selected != null, onClick = {
+            if (selected != null) onSelected(null) else expanded = true
+        }, modifier = Modifier.fillMaxWidth(),
+            label = { Text(when (selected) {
+                AssessmentStatus.COMPLETED -> "Completed"
+                AssessmentStatus.DRAFT -> "Uncompleted"
+                else -> "Status"
+            }, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelMedium) })
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(text = { Text("All statuses") }, onClick = { onSelected(null); expanded = false })
-            AssessmentStatus.entries.forEach { status ->
-                DropdownMenuItem(text = { Text(status.label()) }, onClick = { onSelected(status); expanded = false })
-            }
+            DropdownMenuItem(text = { Text("Completed") },
+                onClick = { onSelected(AssessmentStatus.COMPLETED); expanded = false })
+            DropdownMenuItem(text = { Text("Uncompleted") },
+                onClick = { onSelected(AssessmentStatus.DRAFT); expanded = false })
         }
     }
 }

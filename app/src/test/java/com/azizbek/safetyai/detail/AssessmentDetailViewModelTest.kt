@@ -4,10 +4,12 @@ import com.azizbek.safetyai.analysis.UnavailableSafetyAnalysisEngine
 import com.azizbek.safetyai.assessment.AssessmentSource
 import com.azizbek.safetyai.assessment.CouplingQuality
 import com.azizbek.safetyai.assessment.TaskType
+import com.azizbek.safetyai.data.result.AnalysisResultStore
 import com.azizbek.safetyai.domain.Assessment
 import com.azizbek.safetyai.domain.AssessmentStatus
 import com.azizbek.safetyai.domain.VideoMetadata
 import com.azizbek.safetyai.history.FakeAssessmentRepository
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -44,14 +46,24 @@ class AssessmentDetailViewModelTest {
 
     @Test
     fun `engine is reported unavailable`() {
-        val viewModel = AssessmentDetailViewModel(FakeAssessmentRepository(), UnavailableSafetyAnalysisEngine(), "abc")
+        val viewModel = AssessmentDetailViewModel(
+            FakeAssessmentRepository(),
+            UnavailableSafetyAnalysisEngine(),
+            AnalysisResultStore(File("build/test-analysis-results")),
+            "abc"
+        )
         assertFalse(viewModel.analysisEngineAvailable)
     }
 
     @Test
     fun `requesting analysis without an engine records MODEL_UNAVAILABLE, never a fabricated result`() = runTest(testDispatcher) {
         val repo = FakeAssessmentRepository(listOf(assessment()))
-        val viewModel = AssessmentDetailViewModel(repo, UnavailableSafetyAnalysisEngine(), "abc")
+        val viewModel = AssessmentDetailViewModel(
+            repo,
+            UnavailableSafetyAnalysisEngine(),
+            AnalysisResultStore(File("build/test-analysis-results")),
+            "abc"
+        )
         val job = launch { viewModel.assessment.collect {} }
         advanceUntilIdle()
 

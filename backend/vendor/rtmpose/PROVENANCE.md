@@ -19,7 +19,7 @@ identical to the original.
 - Working tree state at copy time: clean — `git status --short` reported no
   local modifications to any of the five files below.
 - Copy performed: 2026-09-17, via `cp -p` (byte copy, not re-typed/re-read),
-  from a running Claude Code session at the user's explicit request.
+  at the user's explicit request.
 - License: **no `LICENSE` file exists anywhere in the SyncApp repository
   root** (checked at copy time). SyncApp is an internal, unpublished research
   project (the user's own Master's/PhD thesis codebase) — not released under

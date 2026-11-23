@@ -50,6 +50,8 @@ class AssessmentFormViewModel(private val savedStateHandle: SavedStateHandle) : 
 
     fun onLoadTextChange(value: String) = update { it.withLoadText(value) }
 
+    fun onLoadCategorySelected(value: String) = update { it.withLoadCategory(value) }
+
     fun onSuddenForceChange(enabled: Boolean) = update { it.copy(suddenForce = enabled) }
 
     fun onCouplingSelected(quality: CouplingQuality) =

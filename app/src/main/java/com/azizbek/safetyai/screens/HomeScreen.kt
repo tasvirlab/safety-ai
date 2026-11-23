@@ -1,6 +1,8 @@
 package com.azizbek.safetyai.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lightbulb
@@ -27,6 +30,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.azizbek.safetyai.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -71,6 +78,14 @@ fun HomeScreen(
         contentPadding = PaddingValues(start = 20.dp, top = 24.dp, end = 20.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(28.dp)
     ) {
+        item {
+            Image(
+                painter = painterResource(R.drawable.home_rebar_pose_phone),
+                contentDescription = "Construction worker tying rebar with a posture overlay and a phone on a tripod",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxWidth().aspectRatio(2f).clip(RoundedCornerShape(16.dp))
+            )
+        }
         item { HomeHeading(onStartAssessment = { showAssessmentSheet = true }) }
         item {
             RecentAssessmentsSection(
@@ -112,19 +127,19 @@ private fun HomeHeading(onStartAssessment: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
-                text = "Ready to assess a task?",
+                text = "Assess construction work posture",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
-                text = "Record a task or upload an existing video to review posture and ergonomic risk.",
+                text = "Record one worker or upload a video to review posture-related ergonomic risk.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         SafetyPrimaryButton(
-            text = "Start assessment",
+            text = "Record or upload task",
             onClick = onStartAssessment,
             modifier = Modifier.fillMaxWidth()
         )
@@ -222,7 +237,7 @@ private fun CaptureTipCard() {
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    text = "Film side-on to the worker, full body in frame, one full task cycle. Better framing, better scoring.",
+                    text = "Record one worker from the side. Keep the full body, hands and feet visible throughout the task.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

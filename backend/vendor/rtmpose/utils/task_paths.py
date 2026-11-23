@@ -72,13 +72,13 @@ _TASK_FOLDER_RE = re.compile(r"^\d{2}_")
 # Folders under outputs/ that are not subjects.
 RESERVED_ROOT_DIRS = ("_dataset_exports", "_UNASSIGNED")
 # Folder under a subject that holds static/calibration trials — deliberately NOT
-# one of the eight canonical tasks (see CLAUDE.md: Static Standing was removed
+# one of the eight canonical tasks (Static Standing was removed
 # from the protocol; these captures exist only for extrinsic calibration).
 CALIBRATION_DIR = "calibration"
 
 
 # ── Canonical tasks ───────────────────────────────────────────────────────────
-# The eight-task protocol is fixed (CLAUDE.md §5) and does NOT depend on how the
+# The eight-task protocol is fixed and does NOT depend on how the
 # raw Vicon files happen to be named. Order here is protocol order.
 CANONICAL_TASKS: dict[str, str] = {
     "lifting":                 "01_lifting",
@@ -268,8 +268,7 @@ class Artifacts:
     REBA_RESULT     = "result.json"           # combined summary of all three channels
     # NOTE: the former REBA_CUMULATIVE ("cumulative_scores.csv") / REBA_DOSE
     # ("dose.json") were removed — they belonged to the abandoned "cumulative
-    # exposure index / dose / TWA" framing. Do not reintroduce that naming
-    # (see root CLAUDE.md terminology rules).
+    # exposure index / dose / TWA" framing. Do not reintroduce that naming.
 
     # qa/ — verification and debugging only, never an analysis input
     QA_OVERLAY      = "overlay.mp4"

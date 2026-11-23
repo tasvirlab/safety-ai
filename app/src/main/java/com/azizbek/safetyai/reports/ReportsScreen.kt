@@ -1,5 +1,6 @@
 package com.azizbek.safetyai.reports
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -69,7 +70,11 @@ fun ReportsScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(state.items, key = { it.id }) { assessment ->
-                    SafetyCard(modifier = Modifier.fillMaxWidth()) {
+                    SafetyCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenReport(assessment.id) }
+                    ) {
                         Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                             Text(assessment.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                             Text(

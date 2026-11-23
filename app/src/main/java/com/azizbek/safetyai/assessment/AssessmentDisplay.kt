@@ -8,11 +8,6 @@ fun AssessmentSource.sourceLabel(): String = when (this) {
     AssessmentSource.VIDEO_UPLOAD -> "Video upload"
 }
 
-fun AssessmentSource.continueLabel(): String = when (this) {
-    AssessmentSource.CAMERA -> "Continue to camera"
-    AssessmentSource.VIDEO_UPLOAD -> "Continue to video"
-}
-
 fun TaskType.label(): String = when (this) {
     TaskType.LIFTING -> "Lifting"
     TaskType.CARRYING -> "Carrying"
@@ -21,7 +16,12 @@ fun TaskType.label(): String = when (this) {
     TaskType.OVERHEAD_WORK -> "Overhead work"
     TaskType.BENDING_TWISTING -> "Bending or twisting"
     TaskType.KNEELING_SQUATTING -> "Kneeling or squatting"
-    TaskType.OTHER -> "Other"
+    TaskType.OTHER -> "Other construction task"
+    TaskType.MATERIAL_LIFTING -> "Material lifting and placement"
+    TaskType.REBAR_TYING -> "Rebar tying"
+    TaskType.ROOFING_WORK -> "Roofing work"
+    TaskType.OVERHEAD_FASTENING -> "Overhead fastening"
+    TaskType.WALL_PAINTING -> "Wall painting"
 }
 
 fun CouplingQuality.label(): String = when (this) {

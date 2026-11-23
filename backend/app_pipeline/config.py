@@ -19,9 +19,12 @@ class CheckpointConfig:
     label: str
     state_dict_key: str
     num_frame: int
-    embed_dim_ratio: float
+    embed_dim_ratio: int  # NOT float — nn.Linear's shape tuple requires an int; a float here
+    # breaks torch's overload resolution inside PoseMamba's construction with an opaque
+    # "empty() received an invalid combination of arguments" error (confirmed via direct
+    # repro: embed_dim_ratio=128.0 fails, embed_dim_ratio=128 succeeds, identical otherwise).
     depth: int
-    mlp_ratio: float
+    mlp_ratio: float  # a real multiplier used in floating-point math, not a shape dimension — float is correct here
 
 
 @dataclass(frozen=True)
@@ -98,7 +101,7 @@ def load_config(path: Path | str | None = None) -> PipelineConfig:
         label=ck["label"],
         state_dict_key=ck["state_dict_key"],
         num_frame=int(ck["num_frame"]),
-        embed_dim_ratio=float(ck["embed_dim_ratio"]),
+        embed_dim_ratio=int(ck["embed_dim_ratio"]),
         depth=int(ck["depth"]),
         mlp_ratio=float(ck["mlp_ratio"]),
     )

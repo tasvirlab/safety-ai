@@ -14,10 +14,12 @@ data class AssessmentFormState(
     val projectOrSite: String = "",
     val workerReference: String = "",
     val taskType: TaskType? = null,
+    val otherImageIndex: Int = kotlin.random.Random.nextInt(3),
     val taskTypeTouched: Boolean = false,
     val customTaskDescription: String = "",
     val customTaskTouched: Boolean = false,
     val loadKgText: String = "",
+    val loadIsCategory: Boolean = false,
     val loadTouched: Boolean = false,
     val suddenForce: Boolean = false,
     val coupling: CouplingQuality? = null,
@@ -52,7 +54,7 @@ data class AssessmentFormState(
 
     /** Parsed kg value, or null when the text isn't a valid number. Accepts "," or "." as the decimal separator. */
     val loadKg: Double? get() = loadKgText.trim().replace(',', '.').toDoubleOrNull()
-    val isLoadValid: Boolean get() = loadKg?.let { it >= 0.0 } == true
+    val isLoadValid: Boolean get() = loadKg?.let { it.isFinite() && it >= 0.0 } == true
     val loadError: String?
         get() = when {
             !loadTouched -> null
@@ -88,13 +90,16 @@ data class AssessmentFormState(
 
     /** Applies a new load-text value, clearing a "Not applicable" coupling choice that a nonzero load would make invalid. */
     fun withLoadText(value: String): AssessmentFormState {
-        val next = copy(loadKgText = value, loadTouched = true)
+        val next = copy(loadKgText = value, loadTouched = true, loadIsCategory = false)
         return if (next.coupling == CouplingQuality.NOT_APPLICABLE && !next.isZeroLoad) {
             next.copy(coupling = null)
         } else {
             next
         }
     }
+
+    fun withLoadCategory(value: String): AssessmentFormState =
+        withLoadText(value).copy(loadIsCategory = true)
 
     /** The typed, immutable draft — only non-null when the whole form validates. */
     fun toDraftOrNull(): AssessmentDraft? {
@@ -111,7 +116,8 @@ data class AssessmentFormState(
             customTaskDescription = if (type == TaskType.OTHER) trimmedCustomTask else null,
             loadKg = load,
             suddenForce = suddenForce,
-            coupling = couplingValue
+            coupling = couplingValue,
+            loadIsCategory = loadIsCategory
         )
     }
 

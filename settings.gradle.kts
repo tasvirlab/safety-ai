@@ -24,3 +24,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "Safety AI"
 include(":app")
+
+// PoseMamba native scan integration
+include(":posemamba-scan")
+project(":posemamba-scan").projectDir = file("posemamba_deployment/android/posemamba-scan")

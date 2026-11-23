@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -108,6 +109,9 @@ fun CameraRecordingScreen(
     var elapsedSeconds by remember { mutableIntStateOf(0) }
     var showDiscardDialog by remember { mutableStateOf(false) }
     var pendingOutputFile by remember { mutableStateOf<File?>(null) }
+    var framingFeedback by remember { mutableStateOf(
+        FramingFeedback(false, "Keep one worker fully visible")
+    ) }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         permissionState = when {
@@ -146,27 +150,64 @@ fun CameraRecordingScreen(
                 if (cameraUnavailable) {
                     CameraUnavailableContent(onBack = onBack)
                 } else {
-                    val previewView = remember { PreviewView(context) }
+                    val previewView = remember {
+                        PreviewView(context).apply { scaleType = PreviewView.ScaleType.FIT_CENTER }
+                    }
                     // Rebinding tears down any in-progress recording, so this only
                     // reruns when the lens actually changes — never on every
                     // recomposition (e.g. the once-a-second recording timer).
                     LaunchedEffect(useFrontCamera) {
-                        cameraUnavailable = !controller.bind(lifecycleOwner, previewView, useFrontCamera)
+                        framingFeedback = FramingFeedback(false, "Checking full-body framing")
+                        cameraUnavailable = !controller.bind(
+                            lifecycleOwner, previewView, useFrontCamera
+                        ) { feedback -> framingFeedback = feedback }
                     }
                     AndroidView(modifier = Modifier.fillMaxSize(), factory = { previewView })
-                    // Full-body framing guide — a subtle static box, not an accuracy claim.
+                    // Color reports full-body framing, never measured distance.
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 48.dp, vertical = 96.dp)
                     ) {
-                        val frameColor = MaterialTheme.colorScheme.primary
+                        val frameColor = if (framingFeedback.ready) {
+                            Color(0xFF35C96B)
+                        } else {
+                            Color(0xFFE35050)
+                        }
                         androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
                             drawRect(
-                                color = frameColor.copy(alpha = 0.5f),
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
+                                color = frameColor,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4.dp.toPx())
                             )
                         }
+                    }
+
+                    if (!isRecording) {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .windowInsetsPadding(WindowInsets.navigationBars)
+                            .padding(horizontal = 20.dp).padding(bottom = 124.dp)
+                            .fillMaxWidth()
+                            .background(Color.Black.copy(alpha = 0.68f))
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Stand about 3 m from the camera",
+                            color = Color.White,
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = framingFeedback.message,
+                            color = if (framingFeedback.ready) Color(0xFF35C96B) else Color(0xFFFF7777),
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
                     }
 
                     CameraTopBar(
@@ -175,7 +216,10 @@ fun CameraRecordingScreen(
                         hasFlash = controller.hasFlash,
                         flashOn = torchOn,
                         recordingDisabled = isRecording,
-                        onSwitchCamera = { useFrontCamera = !useFrontCamera },
+                        onSwitchCamera = {
+                            framingFeedback = FramingFeedback(false, "Checking full-body framing")
+                            useFrontCamera = !useFrontCamera
+                        },
                         onToggleFlash = {
                             torchOn = !torchOn
                             controller.setTorch(torchOn)

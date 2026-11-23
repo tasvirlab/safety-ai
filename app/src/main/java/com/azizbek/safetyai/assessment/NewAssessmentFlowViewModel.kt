@@ -75,6 +75,7 @@ class NewAssessmentFlowViewModel(
                 taskType = draft.taskType,
                 customTaskDescription = draft.customTaskDescription,
                 loadKg = draft.loadKg,
+                loadIsCategory = draft.loadIsCategory,
                 suddenForce = draft.suddenForce,
                 coupling = draft.coupling,
                 source = draft.source,

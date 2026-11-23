@@ -14,6 +14,7 @@ fun Assessment.toFormState(): AssessmentFormState = AssessmentFormState(
     customTaskDescription = customTaskDescription.orEmpty(),
     customTaskTouched = true,
     loadKgText = formatLoadForEditing(loadKg),
+    loadIsCategory = loadIsCategory,
     loadTouched = true,
     suddenForce = suddenForce,
     coupling = coupling,
@@ -30,6 +31,7 @@ fun AssessmentFormState.applyEditsTo(original: Assessment): Assessment? {
         taskType = draft.taskType,
         customTaskDescription = draft.customTaskDescription,
         loadKg = draft.loadKg,
+        loadIsCategory = draft.loadIsCategory,
         suddenForce = draft.suddenForce,
         coupling = draft.coupling,
         updatedAtEpochMs = System.currentTimeMillis()

@@ -47,6 +47,7 @@ class EditAssessmentViewModel(
     fun onTaskTypeSelected(type: TaskType) = update { it.copy(taskType = type, taskTypeTouched = true) }
     fun onCustomTaskDescriptionChange(value: String) = update { it.copy(customTaskDescription = value, customTaskTouched = true) }
     fun onLoadTextChange(value: String) = update { it.withLoadText(value) }
+    fun onLoadCategorySelected(value: String) = update { it.withLoadCategory(value) }
     fun onSuddenForceChange(enabled: Boolean) = update { it.copy(suddenForce = enabled) }
     fun onCouplingSelected(quality: CouplingQuality) = update { it.copy(coupling = quality, couplingTouched = true) }
 

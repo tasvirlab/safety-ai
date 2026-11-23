@@ -14,5 +14,6 @@ data class AssessmentDraft(
     val customTaskDescription: String?,
     val loadKg: Double,
     val suddenForce: Boolean,
-    val coupling: CouplingQuality
+    val coupling: CouplingQuality,
+    val loadIsCategory: Boolean = false
 )

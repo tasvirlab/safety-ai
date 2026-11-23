@@ -1,6 +1,7 @@
 package com.azizbek.safetyai.settings
 
 import android.content.pm.PackageManager
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,8 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -46,6 +49,7 @@ fun SettingsScreen(
     assessmentRepository: AssessmentRepository,
     videoFileStore: VideoFileStore,
     onBack: () -> Unit,
+    onFaq: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModel.factory(themePreferencesRepository, assessmentRepository, videoFileStore)
     )
@@ -78,6 +82,21 @@ fun SettingsScreen(
             modifier = Modifier.padding(innerPadding).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp)
         ) {
+            SettingsSection(title = "Help") {
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable(onClick = onFaq).padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.HelpOutline, contentDescription = null)
+                    Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+                        Text("Help and FAQ", style = MaterialTheme.typography.titleSmall)
+                        Text("Recording, results and REBA scores", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Icon(Icons.Filled.ChevronRight, contentDescription = null)
+                }
+            }
+
             SettingsSection(title = "Appearance") {
                 Column(Modifier.selectableGroup()) {
                     AppearanceOption("Light", darkModePreference == false) { viewModel.setAppearance(false) }

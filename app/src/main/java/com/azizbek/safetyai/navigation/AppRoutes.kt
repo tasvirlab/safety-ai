@@ -15,6 +15,7 @@ fun replaceVideoRoute(id: String) = "$REPLACE_VIDEO_ROUTE/$id"
 
 const val NOTIFICATIONS_ROUTE = "notifications"
 const val SETTINGS_ROUTE = "settings"
+const val FAQ_ROUTE = "faq"
 
 /** Every route (or prefix) that hides the bottom nav / drawer chrome. */
 val CHROMELESS_ROUTE_PREFIXES = setOf(
@@ -22,5 +23,6 @@ val CHROMELESS_ROUTE_PREFIXES = setOf(
     EDIT_ASSESSMENT_ROUTE,
     REPLACE_VIDEO_ROUTE,
     NOTIFICATIONS_ROUTE,
-    SETTINGS_ROUTE
+    SETTINGS_ROUTE,
+    FAQ_ROUTE
 )

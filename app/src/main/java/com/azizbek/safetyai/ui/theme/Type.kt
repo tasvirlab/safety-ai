@@ -24,7 +24,7 @@ val Barlow = FontFamily(
     Font(R.font.barlow_bold, FontWeight.Bold)
 )
 
-// Matches the Claude Design handoff's Android type scale: display/title/
+// Type scale: display/title/
 // section in Barlow Condensed with wide tracking, body/label/caption in
 // Barlow. labelLarge drives every stock Button/TextButton's text, which is
 // how buttons pick up the condensed CTA look with no per-call changes.

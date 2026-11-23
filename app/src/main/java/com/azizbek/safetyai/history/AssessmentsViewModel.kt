@@ -45,7 +45,11 @@ class AssessmentsViewModel(private val repository: AssessmentRepository) : ViewM
                 assessment.name, assessment.projectOrSite, assessment.workerReference
             ).any { it.contains(query, ignoreCase = true) }
             val matchesTaskType = taskType == null || assessment.taskType == taskType
-            val matchesStatus = status == null || assessment.status == status
+            val matchesStatus = when (status) {
+                null -> true
+                AssessmentStatus.DRAFT -> assessment.status != AssessmentStatus.COMPLETED
+                else -> assessment.status == status
+            }
             matchesQuery && matchesTaskType && matchesStatus
         }
         filtered = if (newestFirst) filtered.sortedByDescending { it.createdAtEpochMs } else filtered.sortedBy { it.createdAtEpochMs }

@@ -2,7 +2,7 @@ package com.azizbek.safetyai.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Safety AI brand palette — matches the Claude Design handoff exactly.
+// Safety AI brand palette.
 // Safety yellow for primary actions, risk colors for warning/high-risk
 // accents only. No teal, no purple, no gradients.
 val SafetyYellow = Color(0xFFFFD54F)
@@ -19,13 +19,6 @@ val SafetyDarkCard = Color(0xFF1C242B)
 val SafetyDarkBorder = Color(0xFF35414A)
 val SafetyDarkTextPrimary = Color(0xFFF4F6F7)
 val SafetyDarkTextSecondary = Color(0xFFA7B0B7)
-
-// Risk-communication fill colors — identical in both themes, always paired
-// with a text/icon label, never color alone. Used for solid chip/bar fills.
-val RiskLow = Color(0xFF66BB6A)
-val RiskMedium = Color(0xFFFFD54F)
-val RiskHigh = Color(0xFFFB8C00)
-val RiskVeryHigh = Color(0xFFE64A19)
 
 // Risk "ink" colors — theme-adjusted so risk text/borders/icons stay AA-legible
 // on their background: darker on light surfaces, lighter on dark surfaces.

@@ -2,7 +2,9 @@ package com.azizbek.safetyai.capture
 
 import android.content.Context
 import android.util.Log
+import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview as CameraPreview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.FallbackStrategy
@@ -18,6 +20,7 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import java.io.File
+import java.util.concurrent.Executors
 
 /**
  * Thin, non-Compose wrapper around CameraX lifecycle binding + video
@@ -30,6 +33,10 @@ class VideoRecorderController(private val context: Context) {
     private var camera: androidx.camera.core.Camera? = null
     private var videoCapture: VideoCapture<Recorder>? = null
     private var activeRecording: Recording? = null
+    private val analysisExecutor = Executors.newSingleThreadExecutor()
+    private var activeAnalysis: ImageAnalysis? = null
+    private var activeAnalyzer: LiveFramingAnalyzer? = null
+    @Volatile private var guidanceGeneration = 0
     var hasFrontCamera: Boolean = false
         private set
     var hasFlash: Boolean = false
@@ -39,8 +46,15 @@ class VideoRecorderController(private val context: Context) {
     fun bind(
         lifecycleOwner: LifecycleOwner,
         previewView: PreviewView,
-        useFrontCamera: Boolean
+        useFrontCamera: Boolean,
+        onFramingFeedback: (FramingFeedback) -> Unit
     ): Boolean {
+        guidanceGeneration++
+        val generation = guidanceGeneration
+        activeAnalysis?.clearAnalyzer()
+        activeAnalysis = null
+        activeAnalyzer?.let { previous -> analysisExecutor.execute { previous.close() } }
+        activeAnalyzer = null
         val provider = cameraProvider ?: runCatching {
             ProcessCameraProvider.getInstance(context).get()
         }.getOrNull()?.also { cameraProvider = it } ?: return false
@@ -58,10 +72,41 @@ class VideoRecorderController(private val context: Context) {
         )
         val recorder = Recorder.Builder().setQualitySelector(qualitySelector).build()
         val capture = VideoCapture.withOutput(recorder)
+        val analysis = ImageAnalysis.Builder()
+            .setTargetAspectRatio(AspectRatio.RATIO_16_9)
+            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+        val analyzer = LiveFramingAnalyzer(context.applicationContext) { feedback ->
+            ContextCompat.getMainExecutor(context).execute {
+                if (guidanceGeneration == generation) onFramingFeedback(feedback)
+            }
+        }
+        analysis.setAnalyzer(analysisExecutor, analyzer)
+
+        val analysisBinding = runCatching {
+            provider.unbindAll()
+            provider.bindToLifecycle(lifecycleOwner, selector, preview, capture, analysis)
+        }
+        val withAnalysis = analysisBinding.getOrNull()
+
+        if (withAnalysis == null) {
+            // Some camera configurations cannot bind all three use cases.
+            Log.w("SafetyAI.Framing", "Three-use-case bind unavailable", analysisBinding.exceptionOrNull())
+            analysis.clearAnalyzer()
+            analysisExecutor.execute { analyzer.close() }
+            onFramingFeedback(FramingFeedback(false,
+                "Automatic check unavailable. Keep your whole body visible"))
+        } else {
+            activeAnalysis = analysis
+            activeAnalyzer = analyzer
+        }
 
         return runCatching {
-            provider.unbindAll()
-            val boundCamera = provider.bindToLifecycle(lifecycleOwner, selector, preview, capture)
+            val boundCamera = withAnalysis ?: run {
+                provider.unbindAll()
+                provider.bindToLifecycle(lifecycleOwner, selector, preview, capture)
+            }
             camera = boundCamera
             hasFlash = !useFrontCamera && boundCamera.cameraInfo.hasFlashUnit()
             videoCapture = capture
@@ -98,9 +143,15 @@ class VideoRecorderController(private val context: Context) {
     }
 
     fun unbind() {
+        guidanceGeneration++
         runCatching { activeRecording?.close() }
         activeRecording = null
+        activeAnalysis?.clearAnalyzer()
+        activeAnalysis = null
+        activeAnalyzer?.let { analyzer -> analysisExecutor.execute { analyzer.close() } }
+        activeAnalyzer = null
         cameraProvider?.unbindAll()
         camera = null
+        analysisExecutor.shutdown()
     }
 }

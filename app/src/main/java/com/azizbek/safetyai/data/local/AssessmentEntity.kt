@@ -1,6 +1,7 @@
 package com.azizbek.safetyai.data.local
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.PrimaryKey
 import com.azizbek.safetyai.assessment.AssessmentSource
 import com.azizbek.safetyai.assessment.CouplingQuality
@@ -33,7 +34,8 @@ data class AssessmentEntity(
     val videoFileSizeBytes: Long,
     val status: AssessmentStatus,
     val createdAtEpochMs: Long,
-    val updatedAtEpochMs: Long
+    val updatedAtEpochMs: Long,
+    @ColumnInfo(defaultValue = "0") val loadIsCategory: Boolean = false
 )
 
 fun AssessmentEntity.toDomain(): Assessment = Assessment(
@@ -56,7 +58,8 @@ fun AssessmentEntity.toDomain(): Assessment = Assessment(
     ),
     status = status,
     createdAtEpochMs = createdAtEpochMs,
-    updatedAtEpochMs = updatedAtEpochMs
+    updatedAtEpochMs = updatedAtEpochMs,
+    loadIsCategory = loadIsCategory
 )
 
 fun Assessment.toEntity(): AssessmentEntity = AssessmentEntity(
@@ -77,5 +80,6 @@ fun Assessment.toEntity(): AssessmentEntity = AssessmentEntity(
     videoFileSizeBytes = video.fileSizeBytes,
     status = status,
     createdAtEpochMs = createdAtEpochMs,
-    updatedAtEpochMs = updatedAtEpochMs
+    updatedAtEpochMs = updatedAtEpochMs,
+    loadIsCategory = loadIsCategory
 )
