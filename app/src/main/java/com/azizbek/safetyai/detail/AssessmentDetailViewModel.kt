@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private val ANY_STATUS: Set<AssessmentStatus> = AssessmentStatus.entries.toSet()
+
 data class AnalysisUiState(
     val isRunning: Boolean = false,
     val stage: String? = null,
@@ -76,12 +78,7 @@ class AssessmentDetailViewModel(
             }
 
             if (!analysisEngine.isAvailable) {
-                repository.save(
-                    current.copy(
-                        status = AssessmentStatus.MODEL_UNAVAILABLE,
-                        updatedAtEpochMs = System.currentTimeMillis()
-                    )
-                )
+                repository.transitionStatus(assessmentId, ANY_STATUS, AssessmentStatus.MODEL_UNAVAILABLE)
 
                 _analysisState.value = AnalysisUiState(
                     error = "The on-device analysis engine is unavailable."
@@ -89,13 +86,11 @@ class AssessmentDetailViewModel(
                 return@launch
             }
 
-            val analyzingAssessment = current.copy(
-                status = AssessmentStatus.ANALYZING,
-                updatedAtEpochMs = System.currentTimeMillis()
-            )
-
             try {
-                repository.save(analyzingAssessment)
+                if (!repository.transitionStatus(assessmentId, ANY_STATUS - AssessmentStatus.ANALYZING, AssessmentStatus.ANALYZING)) {
+                    _analysisState.value = AnalysisUiState(error = "Assessment is no longer available for analysis.")
+                    return@launch
+                }
 
                 val outcome = analysisEngine.analyze(
                     assessmentId = current.id,
@@ -133,13 +128,15 @@ class AssessmentDetailViewModel(
                         }
                         analysisResultStore.save(outcome.result)
 
-                        repository.save(
-                            current.copy(
-                                status = AssessmentStatus.COMPLETED,
-                                updatedAtEpochMs =
-                                    System.currentTimeMillis()
+                        // Commits only if the row is still ANALYZING. An edit or delete during the run
+                        // resets or removes it, so the outdated result is discarded instead.
+                        if (!repository.transitionStatus(assessmentId, setOf(AssessmentStatus.ANALYZING), AssessmentStatus.COMPLETED)) {
+                            analysisResultStore.delete(assessmentId)
+                            _analysisState.value = AnalysisUiState(
+                                error = "The assessment changed during analysis. Run the analysis again."
                             )
-                        )
+                            return@launch
+                        }
 
                         _analysisState.value = AnalysisUiState(
                             isRunning = false,
@@ -150,14 +147,7 @@ class AssessmentDetailViewModel(
                     }
 
                     is AnalysisProgress.Failed -> {
-                        repository.save(
-                            current.copy(
-                                status =
-                                    AssessmentStatus.ANALYSIS_FAILED,
-                                updatedAtEpochMs =
-                                    System.currentTimeMillis()
-                            )
-                        )
+                        repository.transitionStatus(assessmentId, setOf(AssessmentStatus.ANALYZING), AssessmentStatus.ANALYSIS_FAILED)
 
                         _analysisState.value = AnalysisUiState(
                             isRunning = false,
@@ -173,14 +163,7 @@ class AssessmentDetailViewModel(
                          * Keep this guard so an invalid implementation
                          * cannot mark the assessment as completed.
                          */
-                        repository.save(
-                            current.copy(
-                                status =
-                                    AssessmentStatus.ANALYSIS_FAILED,
-                                updatedAtEpochMs =
-                                    System.currentTimeMillis()
-                            )
-                        )
+                        repository.transitionStatus(assessmentId, setOf(AssessmentStatus.ANALYZING), AssessmentStatus.ANALYSIS_FAILED)
 
                         _analysisState.value = AnalysisUiState(
                             error =
@@ -190,14 +173,7 @@ class AssessmentDetailViewModel(
                 }
             } catch (cancelled: CancellationException) {
                 withContext(NonCancellable) {
-                    repository.save(
-                        current.copy(
-                            status =
-                                AssessmentStatus.READY_FOR_ANALYSIS,
-                            updatedAtEpochMs =
-                                System.currentTimeMillis()
-                        )
-                    )
+                    repository.transitionStatus(assessmentId, setOf(AssessmentStatus.ANALYZING), AssessmentStatus.READY_FOR_ANALYSIS)
                 }
 
                 _analysisState.value = AnalysisUiState(
@@ -206,13 +182,7 @@ class AssessmentDetailViewModel(
 
                 throw cancelled
             } catch (error: Throwable) {
-                repository.save(
-                    current.copy(
-                        status = AssessmentStatus.ANALYSIS_FAILED,
-                        updatedAtEpochMs =
-                            System.currentTimeMillis()
-                    )
-                )
+                repository.transitionStatus(assessmentId, setOf(AssessmentStatus.ANALYZING), AssessmentStatus.ANALYSIS_FAILED)
 
                 _analysisState.value = AnalysisUiState(
                     isRunning = false,

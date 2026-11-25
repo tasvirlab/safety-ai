@@ -19,6 +19,11 @@ interface AssessmentRepository {
     suspend fun save(assessment: Assessment)
     suspend fun delete(assessment: Assessment)
     suspend fun deleteAll()
+    /**
+     * Guarded status change: never inserts, never touches other fields. Returns false when the
+     * assessment was deleted or its status is not in [from], so stale callers cannot overwrite newer state.
+     */
+    suspend fun transitionStatus(id: String, from: Set<AssessmentStatus>, to: AssessmentStatus): Boolean
     /** Ids of every stored assessment, used to sweep orphaned analysis results. */
     suspend fun getAllIds(): Set<String>
     /** Recovers interrupted jobs (ANALYZING left by a dead process) and removes orphaned result files. */
@@ -57,7 +62,8 @@ class RoomAssessmentRepository(
             resultStore?.delete(assessment.id)
             dao.update(assessment.copy(status = AssessmentStatus.READY_FOR_ANALYSIS).toEntity())
         } else {
-            dao.update(assessment.toEntity())
+            // Status belongs to the analysis lifecycle; an edit made from a stale snapshot must not rewrite it.
+            dao.update(assessment.copy(status = existing.status).toEntity())
         }
     }
 
@@ -78,6 +84,9 @@ class RoomAssessmentRepository(
         dao.resetStatus(AssessmentStatus.ANALYZING, AssessmentStatus.READY_FOR_ANALYSIS)
         resultStore?.retainOnly(getAllIds())
     }
+
+    override suspend fun transitionStatus(id: String, from: Set<AssessmentStatus>, to: AssessmentStatus): Boolean =
+        dao.transitionStatus(id, from.toList(), to, System.currentTimeMillis()) > 0
 
     override suspend fun getAllIds(): Set<String> = dao.getAllIds().toSet()
 
