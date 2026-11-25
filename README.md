@@ -16,6 +16,8 @@ These screenshots were taken on an emulator without analysis data.
 
 ## Overview
 
+Safety AI is a research prototype I built end to end: the Android app, the on-device inference pipeline, the native operator and the Python reference used to check it.
+
 Manual ergonomic assessment of construction work is slow and depends on the observer. Safety AI automates the measurement part: it turns a single-camera video into joint angles and REBA scores, so a person reviewing the task can see which moments and body regions carry the most risk.
 
 ## Core features
@@ -83,7 +85,7 @@ Requirements: JDK 17 or newer, Android SDK, NDK `28.0.13004108`, CMake `3.22.1`,
 2. Check the setup: `python scripts/check_setup.py`
 3. Build: `./gradlew assembleDebug`
 
-Model files are not needed to compile or run unit tests (CI relies on this). Without them, analysis cannot run. To run analysis, place the models below. They are not distributed with this repository.
+A clean checkout without any model files builds, passes the unit tests and passes lint (verified in GitHub Actions). Without the models, analysis cannot run. To run analysis, place the models below. They are not distributed with this repository.
 
 | Model | Location | SHA-256 |
 |---|---|---|
@@ -101,9 +103,12 @@ The RTMPose files come from the MMPose model zoo. The PoseMamba file is exported
 
 Unit tests need no model or video. They cover the REBA and temporal logic, the frozen pipeline configuration, result storage (round trip, atomic replacement, corrupted files, orphan cleanup) and the rules that decide when a result becomes stale.
 
-Instrumented tests (`connectedDebugAndroidTest`) need a device, the models, and private test videos and golden files that are excluded from the repository. They cannot run from a clean checkout. The Python reference tests in `backend/tests` need PyTorch.
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push: Gradle wrapper validation, native build, `assembleDebug`, unit tests and lint, with no private assets.
 
-GitHub Actions (`.github/workflows/ci.yml`) builds the app and runs unit tests and lint without private assets.
+Not run in CI, because they need private material:
+
+- Instrumented tests (`connectedDebugAndroidTest`): a device, the models, and private test videos and golden files that are excluded from the repository.
+- Python reference tests (`backend/tests`): PyTorch, the research data root (`SAFETYAI_RESEARCH_DATA_ROOT`) and the research checkpoint.
 
 ## Known limitations
 
