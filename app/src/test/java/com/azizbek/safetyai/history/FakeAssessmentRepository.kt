@@ -31,5 +31,7 @@ class FakeAssessmentRepository(initial: List<Assessment> = emptyList()) : Assess
         backing.value = emptyList()
     }
 
+    override suspend fun getAllIds(): Set<String> = backing.value.map { it.id }.toSet()
+    override suspend fun recoverAndSweep() {}
     override suspend fun getAllVideoFilePaths(): List<String> = backing.value.map { it.video.filePath }
 }

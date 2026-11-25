@@ -12,6 +12,7 @@ import com.azizbek.safetyai.data.result.AnalysisResultStore
 import com.azizbek.safetyai.data.repository.AssessmentRepository
 import com.azizbek.safetyai.domain.Assessment
 import com.azizbek.safetyai.domain.AssessmentStatus
+import com.azizbek.safetyai.domain.analysisInputs
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
@@ -122,6 +123,14 @@ class AssessmentDetailViewModel(
 
                 when (outcome) {
                     is AnalysisProgress.Completed -> {
+                        val latest = repository.getById(assessmentId)
+                        if (latest == null || latest.analysisInputs() != current.analysisInputs()) {
+                            // Inputs changed or the assessment was deleted mid-run: drop the outdated result.
+                            _analysisState.value = AnalysisUiState(
+                                error = "The assessment changed during analysis. Run the analysis again."
+                            )
+                            return@launch
+                        }
                         analysisResultStore.save(outcome.result)
 
                         repository.save(

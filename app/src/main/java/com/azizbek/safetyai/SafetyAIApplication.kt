@@ -19,6 +19,7 @@ class SafetyAIApplication : Application() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             val referenced = container.assessmentRepository.getAllVideoFilePaths().toSet()
             container.videoFileStore.deleteUnreferencedFiles(referenced)
+            container.assessmentRepository.recoverAndSweep()
         }
     }
 }

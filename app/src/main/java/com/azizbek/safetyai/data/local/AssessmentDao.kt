@@ -38,6 +38,13 @@ interface AssessmentDao {
     @Query("DELETE FROM assessments")
     suspend fun deleteAll()
 
+    @Query("SELECT id FROM assessments")
+    suspend fun getAllIds(): List<String>
+
+    /** Analysis runs in the foreground screen, so ANALYZING after a restart means the job died. */
+    @Query("UPDATE assessments SET status = :to WHERE status = :from")
+    suspend fun resetStatus(from: AssessmentStatus, to: AssessmentStatus)
+
     @Query("SELECT videoFilePath FROM assessments")
     suspend fun getAllVideoFilePaths(): List<String>
 }

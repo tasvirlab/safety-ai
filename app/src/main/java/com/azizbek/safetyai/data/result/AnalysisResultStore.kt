@@ -8,12 +8,17 @@ import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.InputStream
+import java.io.InvalidClassException
+import java.io.ObjectStreamClass
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.security.MessageDigest
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -32,6 +37,12 @@ class AnalysisResultStore(
     suspend fun save(
         result: SafetyAnalysisResult
     ): File = withContext(Dispatchers.IO) {
+        writeMutex.withLock { saveLocked(result) }
+    }
+
+    private fun saveLocked(
+        result: SafetyAnalysisResult
+    ): File {
         require(result.assessmentId.isNotBlank()) {
             "Result assessment ID must not be blank."
         }
@@ -66,28 +77,17 @@ class AnalysisResultStore(
                 "Analysis result temporary file is empty."
             }
 
-            if (target.exists()) {
-                require(target.delete()) {
-                    "Could not replace the existing analysis result."
-                }
-            }
-
+            // rename(2) replaces the target atomically, so the last valid
+            // result stays in place until the new one is fully committed.
             if (!temporary.renameTo(target)) {
-                temporary.copyTo(
-                    target = target,
-                    overwrite = true
-                )
-
-                require(temporary.delete()) {
-                    "Could not remove the temporary result file."
-                }
+                error("Could not install the new analysis result.")
             }
 
             require(target.isFile && target.length() > 0L) {
                 "Analysis result was not written."
             }
 
-            target
+            return target
         } catch (error: Throwable) {
             temporary.delete()
             throw error
@@ -107,7 +107,7 @@ class AnalysisResultStore(
             return@withContext null
         }
 
-        val result = ObjectInputStream(
+        val result = AllowListObjectInputStream(
             BufferedInputStream(
                 GZIPInputStream(
                     FileInputStream(source)
@@ -149,9 +149,36 @@ class AnalysisResultStore(
     suspend fun delete(
         assessmentId: String
     ): Boolean = withContext(Dispatchers.IO) {
-        val file = resultFile(assessmentId)
-        !file.exists() || file.delete()
+        writeMutex.withLock {
+            val file = resultFile(assessmentId)
+            File(resultDirectory, file.name + TEMPORARY_SUFFIX).delete()
+            !file.exists() || file.delete()
+        }
     }
+
+    /** Removes result files (and stale temporaries) whose assessment is not in [assessmentIds]. */
+    suspend fun retainOnly(assessmentIds: Set<String>) = withContext(Dispatchers.IO) {
+        writeMutex.withLock {
+            val keep = assessmentIds.map { resultFile(it).name }.toSet()
+            resultDirectory.listFiles()?.forEach { file ->
+                val base = file.name.removeSuffix(TEMPORARY_SUFFIX)
+                if (base.endsWith(RESULT_SUFFIX) && base !in keep || file.name.endsWith(TEMPORARY_SUFFIX)) file.delete()
+            }
+        }
+    }
+
+    /** Deserializes only this app's analysis classes plus JDK collections and primitives. */
+    private class AllowListObjectInputStream(input: InputStream) : ObjectInputStream(input) {
+        override fun resolveClass(desc: ObjectStreamClass): Class<*> {
+            val name = desc.name.removePrefix("[").removePrefix("L")
+            val allowed = name.startsWith("com.azizbek.safetyai.") || name.startsWith("java.lang.") ||
+                name.startsWith("java.util.") || name.startsWith("kotlin.") || desc.name.length <= 2
+            if (!allowed) throw InvalidClassException(desc.name, "Class is not allowed in analysis results")
+            return super.resolveClass(desc)
+        }
+    }
+
+    private val writeMutex = Mutex()
 
     private fun ensureDirectory() {
         require(

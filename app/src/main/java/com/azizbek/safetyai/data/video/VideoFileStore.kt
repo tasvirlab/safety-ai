@@ -5,8 +5,10 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import com.azizbek.safetyai.domain.VideoMetadata
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
 import java.util.UUID
 
 /**
@@ -24,15 +26,36 @@ class VideoFileStore(context: Context) {
     /** A fresh, empty destination file for a new camera recording. */
     fun newRecordingFile(): File = File(videosDir, "${UUID.randomUUID()}.mp4")
 
-    /** Streams [uri]'s content into app-private storage without ever holding the whole file in memory. */
+    /**
+     * Streams [uri]'s content into app-private storage in fixed-size chunks.
+     * Content is written to a temporary file and only renamed into place once
+     * copying completes; failure or cancellation leaves no partial file behind.
+     */
     suspend fun copyToPrivateStorage(uri: Uri): File = withContext(Dispatchers.IO) {
         val destination = File(videosDir, "${UUID.randomUUID()}.mp4")
-        appContext.contentResolver.openInputStream(uri)?.use { input ->
-            destination.outputStream().use { output ->
-                input.copyTo(output, bufferSize = DEFAULT_BUFFER_BYTES)
+        val temporary = File(videosDir, destination.name + TEMPORARY_SUFFIX)
+        try {
+            val input = appContext.contentResolver.openInputStream(uri)
+                ?: throw IOException("Unable to open the selected video")
+            input.use {
+                temporary.outputStream().use { output ->
+                    val buffer = ByteArray(DEFAULT_BUFFER_BYTES)
+                    while (true) {
+                        ensureActive()
+                        val read = it.read(buffer)
+                        if (read < 0) break
+                        output.write(buffer, 0, read)
+                    }
+                }
             }
-        } ?: error("Unable to open the selected video")
-        destination
+            if (temporary.length() == 0L) throw IOException("The selected video is empty")
+            if (!temporary.renameTo(destination)) throw IOException("Could not store the selected video")
+            destination
+        } catch (error: Throwable) {
+            temporary.delete()
+            destination.delete()
+            throw error
+        }
     }
 
     suspend fun readMetadata(file: File): VideoMetadata = withContext(Dispatchers.IO) {
@@ -58,18 +81,35 @@ class VideoFileStore(context: Context) {
         }
     }
 
-    /** Best-effort validation that [uri] actually points at readable video content. */
+    /**
+     * True only when [uri] opens and holds a decodable video track with
+     * positive duration and dimensions. A missing or wrong MIME type alone does
+     * not reject the content; only an explicit non-video type does.
+     */
     suspend fun isReadableVideo(uri: Uri): Boolean = withContext(Dispatchers.IO) {
         val mimeType = appContext.contentResolver.getType(uri)
-        if (mimeType != null && !mimeType.startsWith("video/")) return@withContext false
-        runCatching {
-            appContext.contentResolver.openInputStream(uri)?.use { it.read() != -1 || true }
-        }.getOrNull() == true
+        if (mimeType != null && mimeType != "application/octet-stream" && !mimeType.startsWith("video/")) {
+            return@withContext false
+        }
+        val retriever = MediaMetadataRetriever()
+        try {
+            retriever.setDataSource(appContext, uri)
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO) == "yes" &&
+                (retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L) > 0L &&
+                (retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0) > 0 &&
+                (retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0) > 0
+        } catch (_: RuntimeException) {
+            false
+        } finally {
+            retriever.release()
+        }
     }
 
-    fun delete(filePath: String) {
-        runCatching { File(filePath).delete() }
-    }
+    /** Deletes [filePath] only if it lives directly inside the managed videos directory. */
+    fun delete(filePath: String): Boolean = runCatching {
+        val file = File(filePath).canonicalFile
+        file.parentFile == videosDir.canonicalFile && (!file.exists() || file.delete())
+    }.getOrDefault(false)
 
     /** Removes any file in [videosDir] not present in [referencedPaths] — abandoned drafts and cancelled uploads. */
     suspend fun deleteUnreferencedFiles(referencedPaths: Set<String>) = withContext(Dispatchers.IO) {
@@ -84,5 +124,6 @@ class VideoFileStore(context: Context) {
 
     private companion object {
         const val DEFAULT_BUFFER_BYTES = 8 * 1024
+        const val TEMPORARY_SUFFIX = ".part"
     }
 }
