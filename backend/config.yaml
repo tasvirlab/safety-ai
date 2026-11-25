@@ -14,7 +14,8 @@
 
 # Root of the research project. Read-only from this backend's point of view —
 # nothing under app_pipeline/ ever writes here.
-research_data_root: "C:/Users/tempadmin/Research DATA"
+# Set SAFETYAI_RESEARCH_DATA_ROOT to the research project root; it overrides this value.
+research_data_root: "research_data"
 
 # Active PoseMamba checkpoint.
 #

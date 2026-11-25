@@ -24,6 +24,7 @@ pipeline, or any threshold.
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -32,7 +33,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-POSEMAMBA_ROOT = Path("/mnt/c/Users/tempadmin/Research DATA/PoseMamba")
+POSEMAMBA_ROOT = Path(os.environ["SAFETYAI_RESEARCH_DATA_ROOT"]) / "PoseMamba"
 CHECKPOINT = POSEMAMBA_ROOT / ("experiments/exp05_5fold_cv/checkpoints/fold1/"
                                "exp05_fold1_2026_09_15_T_11_23_07/best_epoch.bin")
 OUT_DIR = Path(__file__).resolve().parents[1] / "fixtures"

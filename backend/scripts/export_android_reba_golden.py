@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
 import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-REBA_ROOT = Path("/mnt/c/Users/tempadmin/Research DATA/REBA_Engine")
+REBA_ROOT = Path(os.environ["SAFETYAI_RESEARCH_DATA_ROOT"]) / "REBA_Engine"
 MODEL_DIR = (
     PROJECT_ROOT
     / "posemamba_deployment/android/posemamba-scan"

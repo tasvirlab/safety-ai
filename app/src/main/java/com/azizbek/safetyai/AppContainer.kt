@@ -21,7 +21,7 @@ class AppContainer(context: Context) {
     private val database by lazy { AppDatabase.getInstance(context) }
     val videoFileStore by lazy { VideoFileStore(context) }
     val assessmentRepository: AssessmentRepository by lazy {
-        RoomAssessmentRepository(database.assessmentDao(), videoFileStore)
+        RoomAssessmentRepository(database.assessmentDao(), videoFileStore, analysisResultStore)
     }
     val notificationRepository by lazy { NotificationRepository(database.notificationDao()) }
     val themePreferencesRepository by lazy { ThemePreferencesRepository(context) }

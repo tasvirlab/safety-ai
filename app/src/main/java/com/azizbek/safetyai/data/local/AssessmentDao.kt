@@ -38,6 +38,17 @@ interface AssessmentDao {
     @Query("DELETE FROM assessments")
     suspend fun deleteAll()
 
+    @Query("SELECT id FROM assessments")
+    suspend fun getAllIds(): List<String>
+
+    /** Analysis runs in the foreground screen, so ANALYZING after a restart means the job died. */
+    @Query("UPDATE assessments SET status = :to WHERE status = :from")
+    suspend fun resetStatus(from: AssessmentStatus, to: AssessmentStatus)
+
+    /** Changes only status and timestamp of an existing row whose status is in [from]; returns rows changed (0 if deleted or not in [from]). */
+    @Query("UPDATE assessments SET status = :to, updatedAtEpochMs = :now WHERE id = :id AND status IN (:from)")
+    suspend fun transitionStatus(id: String, from: List<AssessmentStatus>, to: AssessmentStatus, now: Long): Int
+
     @Query("SELECT videoFilePath FROM assessments")
     suspend fun getAllVideoFilePaths(): List<String>
 }

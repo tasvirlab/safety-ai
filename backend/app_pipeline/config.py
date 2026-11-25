@@ -5,6 +5,8 @@ the checkpoint swap described in config.yaml stays a one-line, one-file change.
 """
 from __future__ import annotations
 
+import os
+
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -85,10 +87,10 @@ def load_config(path: Path | str | None = None) -> PipelineConfig:
     cfg_path = Path(path) if path is not None else _CONFIG_PATH
     doc = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
 
-    root = Path(doc["research_data_root"])
+    root = Path(os.environ.get("SAFETYAI_RESEARCH_DATA_ROOT") or doc["research_data_root"])
     if not root.exists():
         raise FileNotFoundError(
-            f"research_data_root {root} does not exist — fix config.yaml "
+            f"research_data_root {root} does not exist — set SAFETYAI_RESEARCH_DATA_ROOT or fix config.yaml "
             f"({cfg_path}) before running the pipeline."
         )
 
