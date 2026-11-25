@@ -8,8 +8,9 @@ on:
 permissions:
   contents: read
 
-# Model files and research videos are private and never available here.
-# These jobs cover everything that does not need them.
+# Model files, research videos and the research data root are private and never
+# available here. The Python reference tests need them (and PyTorch), so they are
+# research-only checks and are not run in CI.
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -41,17 +42,3 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build, unit tests, lint
         run: ./gradlew assembleDebug testDebugUnitTest lintDebug
-
-  python-reference:
-    runs-on: ubuntu-latest
-    # Not yet verified outside the research machine; failures are reported but do not block.
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: |
-          pip install numpy pandas pyyaml scipy opencv-python-headless pytest
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-      - run: python -m pytest backend/tests -q
