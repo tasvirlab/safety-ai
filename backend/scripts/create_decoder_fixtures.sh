@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ASSETS="/mnt/c/Users/tempadmin/AndroidStudioProjects/SafetyAI_AndroidIntegration/app/src/androidTest/assets/video"
+ASSETS="$(cd "$(dirname "$0")/../.." && pwd)/app/src/androidTest/assets/video"
 mkdir -p "$ASSETS"
 
 ffmpeg -y \

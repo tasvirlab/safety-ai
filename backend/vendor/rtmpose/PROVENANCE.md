@@ -13,7 +13,7 @@ identical to the original.
 ## Source
 
 - Repository: `https://github.com/TasvirLab/SyncApp.git`
-- Local checkout used for this copy: `C:\Users\tempadmin\Research DATA\SyncApp`
+- Local checkout used for this copy: the owner's private SyncApp working copy
 - Commit: `389752795d9a429b154613dad599061001d1e40a`
   ("Initial commit: SyncApp source, no research data", 2026-07-28 17:03:38 +0900)
 - Working tree state at copy time: clean — `git status --short` reported no
